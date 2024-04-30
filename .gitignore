@@ -38,6 +38,7 @@
 
 # artifacts of creation
 **/output/*.html
+**/output/*.css
 
 # Stuff I just want to keep private
 **/private
