@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
+#include <vector>
 #include <iterator>
 #include <regex>
 #include "subfiles/styler.h"
@@ -14,12 +15,13 @@ using namespace std;
 
 int main()
 {
-	string filename{""};
-	// system("Notepad.exe");
-	cout << "Choose the name of the html file to open: ";
-	cin >> filename;
+	// string filename{""};
+	// // system("Notepad.exe");
+	// cout << "Choose the name of the html file to open: ";
+	// cin >> filename;
 	sClean scriv;
-	scriv.findStyle(filename);
+	scriv.findStyle();
+	//scriv.executor();
 	// fstream scriv ("html/cazzo.html");
 	// scriv.open("private/" + filename + ".html"); //later change the hard-coding of "private" to just html
 	// if (scriv.is_open())
