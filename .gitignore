@@ -30,3 +30,14 @@
 *.exe
 *.out
 *.app
+
+# Other things I know that the visual studio extensions compile with
+*.pdb
+*.vscode
+*.ilk
+
+# artifacts of creation
+**/output/*.html
+
+# Stuff I just want to keep private
+**/private
