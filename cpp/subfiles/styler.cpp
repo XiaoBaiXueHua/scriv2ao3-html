@@ -3,205 +3,338 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <iterator>
 #include <regex>
 #include "./styler.h"
 
-sClean::sClean() {
-	inputName();
-	setiPath("html"); //default in path folder is html
+using namespace std;
+
+sClean::sClean()
+{
+	// inputName();
+	setiPath("html"); // default in path folder is html
 	setoPath("output");
 }
-sClean::sClean(std::string path)
+sClean::sClean(string path)
 {
-	inputName();
+	// inputName();
 	setiPath(path);
 	setoPath("output");
-	
+
 	// diffInPath = true;
 	// defaultInPath = path;
 }
 
-//void sClean::findStyle(std::fstream &rawStream, std::string name)
-//void sClean::findStyle(std::string name)
+// void sClean::findStyle(fstream &rawStream, string name)
+// void sClean::findStyle(string name)
+
+// i think later transfer the getline() loop to executor() so that it can iterate through the entire source file exactly one time
 void sClean::findStyle()
 { // takes the raw stream bc it will open the cleaned stream w/in the function. also the raw stream should be an html file
 
-	std::string line{""}; // initialize to blank
-	//setName(name), 
-	setType("html");
-	// sClean::open(rawStream, getFullPath());
-	setRaw(getFullPath(true));
-
-	// std::fstream cleanStream;
-	setType("css"); // yeah they're getting hard-coded
-	setClean(getFullPath(false));
-	// sClean::open(cleanStream, getFullPath());
-
-	std::regex styleStart(sClean::findEl("style", "type=\"text/css\"", false));
-	std::regex styleEnd(sClean::findEl("style", true));
-	bool style{false};
-	resetLineNum();
-	// std::vector<std::string>* pointP = &impP;
-	// std::vector<std::string>* pointSp = &impSp;
-	// auto impP = new std::vector<std::string>; // pointer towards vector of important p
-	// auto impSp = new std::vector<std::string>; // points to vector of important spans
-	//std::string* impP{nullptr}; // initialize the pointer to nullptr
-	//*impP -> impP;
-	//impP = new std::vector<std::string>; //vector of important p
-
-	while (std::getline(raw, line))
-	{
-		//std::cout << "Line " << numLines << ": " << line << std::endl;
-		if (raw.eof() || std::regex_search(line, styleEnd))
-		{ // if we reached the end of the file or </style>
-			std::cout << "End of style found on line " << numLines << ".\n";
-			break;
-		}
-		if (style) { 
-			cleaned << line << std::endl; 
-			if(std::regex_search(line, std::regex("p.p\\d+"))) {
-				// std::cout << "This line dictates the styling for a paragraph: " << line << std::endl;
-				pDetect(impP, line);
-			} else if (std::regex_search(line, std::regex("span.(s\\d+|Scrivener-converted-space)"))) {
-				spDetect(impSp, line);
-				// std::cout << "This line styles a span styling: " << line << "\n";
-			}
-		}
-		if (std::regex_search(line, styleStart)) { 
-			style = true; 
-			std::cout << "Start of style found on line " << numLines << ".\n";
-			}
-		numLines++;
-	}
-	std::cout << "The <style> element has now been copied over to a css file." << std::endl << std::endl;
-	// std::cout << "We shall now look at the vectors of important elements.\n\n";
-	// std::cout << "Starting with the pees: \n";
-	// for (const auto rule : impP) {
-	// 	std::cout << rule << "\n";
-	// }
-	// std::cout << "\nAnd now onto the spees:\n";
-	// for (const auto rule : impSp) {
-	// 	std::cout << rule << "\n";
-	// }
+	// string line{""}; // initialize to blank
+	// setName(name),
 	
-	//DO NOT. FUCKIGN FORGET. TO DESTROY THY POINTERS.
-	// pointP = nullptr;
-	// pointSp = nullptr;
-	// delete pointP;
-	// delete pointSp;
-	//impP -> nullptr;
-	//peePoint = nullptr;
-	//delete peePoint;
+
+	// regex styleStart(sClean::findEl("style", "type=\"text/css\"", false));
+	// regex styleEnd(sClean::findEl("style", true));
+	//bool style{false};
+	// vector<string>* pointP = &impP;
+	// vector<string>* pointSp = &impSp;
+	// auto impP = new vector<string>; // pointer towards vector of important p
+	// auto impSp = new vector<string>; // points to vector of important spans
+	// string* impP{nullptr}; // initialize the pointer to nullptr
+	//*impP -> impP;
+	// impP = new vector<string>; //vector of important p
+	
+	
+	//findEl("style", true);
+	// while (getline(raw, temp))
+	// {
+		// cout << "Line " << numLines << ": " << line << endl;
+		// if (raw.eof() || regex_search(temp, elEnd))
+		if (regex_search(temp, elEnd))
+		{ // if we reached the end of the file or </style>
+			// cout << "End of " << el << " found on line " << numLines << ".\n";
+			// break;
+			styleSw = true; // sets the permanent switch for found style to true 
+			foundEl = false; // this gets declared inside the findStyle and sanitize() functions
+			// el = "body";
+			findEl("body"); //okay so have to do it this way in order to make the css work correctly
+			setType("html"); //changes the next file type to html
+			setClean(getTmpPath(false)); // switches the stream to the new tmp file
+			loggy("the vector of important p's: ");
+			loggy(impP);
+			// log("the vector of important spans: ");
+			// log(impSp);
+		}
+		if (foundEl)
+		{
+			// line = line.trim();
+			// cleaned << temp << endl;
+			if (regex_search(temp, regex("p.p\\d+")))
+			{
+				// cout << "This line dictates the styling for a paragraph: " << line << endl;
+				pDetect(impP, temp);
+			}
+			else if (regex_search(temp, regex("span.(s\\d+|Scrivener-converted-space)")))
+			{
+				spDetect(impSp, temp);
+				//cout << "This line styles a span styling: " << line << "\n";
+			}
+		}
+		// if (regex_search(temp, elStart))
+		// {
+		// 	foundEl = true; 
+		// 	cout << "Start of " << el << " found on line " << numLines << ".\n";
+		// }
+		// numLines++;
+	// }
+	// cout << "The <style> element has now been copied over to a css file." << endl << endl;
+	// cout << "We shall now look at the vectors of important elements.\n\n";
+	// cout << "Starting with the pees: \n";
+	// for (const auto rule : impP) {
+	// 	cout << rule << "\n";
+	// }
+	// cout << "\nAnd now onto the spees:\n";
+	// for (const auto rule : impSp) {
+	// 	cout << rule << "\n";
+	// }
+
+	// DO NOT. FUCKIGN FORGET. TO DESTROY THY POINTERS.
+	//  pointP = nullptr;
+	//  pointSp = nullptr;
+	//  delete pointP;
+	//  delete pointSp;
+	// impP -> nullptr;
+	// peePoint = nullptr;
+	// delete peePoint;
 }
 
-void sClean::sanitize() {
+void sClean::sanitize()
+{
+	// while (getline(raw, temp)) {
+		// if (raw.eof() || regex_search(temp, elEnd)) {
+		// 	cout << "reached the end of the file or smth idk." << endl;
+		// }
+		// if (foundEl) {
+		// 	//  temp = regex_replace(temp, regex("&#34;"), "\"");
+		// 	//  cleaned << temp << endl; // later remove the endl so that we can have another function clean up the misnesting, but for now just print it so we can seeeee it
+		// }
+		if (regex_search(temp, elStart)) {
+			foundEl = true;
+		}
+	// }
 	// okay so. what this does is that it continues to iterate through the html file.
 	// it ignores things until it hits the <body> element, after which it starts checking the element class names against its vector of allowed class names
 	// for the p's, if it doesn't match any allowed classes, then just remove the class name. for the spans, remove the entire el if it doesn't fit. if it does, then for both, replace just the el + class w/the correct semantic name, and then replace the nearest closing sp/p with the correct closing el as well
-	//when outputting the html this first time, don't have the endl, and keep it in a temp file, which will get deleted at the end.
-	//the temp file is then read to further sanitize by checking for misnesting and the like all at once
+	// when outputting the html this first time, don't have the endl, and keep it in a temp file, which will get deleted at the end.
+	// the temp file is then read to further sanitize by checking for misnesting and the like all at once
 }
 
-void sClean::inputName() {
-	std::string filename{""};
-	std::cout << "Choose the name of the html file to open: ";
-	std::cin >> filename;
+void sClean::inputName()
+{
+	string filename{""};
+	cout << "Choose the name of the html file to open: ";
+	cin >> filename;
 	setName(filename);
 }
 
-void sClean::setiPath(std::string str) { fipath = str + "/"; } // will also automatically add in the /
-void sClean::setoPath(std::string str) { fopath = str + "/"; }
-void sClean::setName(std::string str) { fname = str; } // the name should only really be used once
-void sClean::setType(std::string str) { ftype = "." + str; } // so in this case, Do Not include the period
+void sClean::setiPath(string str) { fipath = str + "/"; } // will also automatically add in the /
+void sClean::setoPath(string str) { fopath = str + "/"; }
+void sClean::setName(string str) { fname = str; tmpname = str + "_tmp";}		 // the name should only really be used once
+void sClean::setType(string str) { ftype = "." + str; } // so in this case, Do Not include the period
 
-//functions for redirecting the stream to other files
-void sClean::redirStream(std::fstream &stm, std::string path)
+// functions for redirecting the stream to other files
+void sClean::redirStream(fstream &stm, string path)
 {
-	if (stm.is_open())
+	if (stm.is_open()) //if there's a file already open
 	{
-		stm.clear();
-		stm.close();
+		// stm.clear();
+		stm.close(); //then just close it
 	}
-	sClean::open(stm, path);
+	sClean::open(stm, path); //and then do the standard opening procedure
 }
-void sClean::setRaw(std::string path)
+void sClean::setRaw(string path)
 {
 	redirStream(raw, path);
-	// if (raw.is_open()) { //if it's already open, then clear n close it
-	// 	raw.clear();
-	// 	raw.close();
-	// }
-	// sClean::open(raw, path);
-	// raw& operator= &r;
-	// };
 }
-void sClean::setClean(std::string path)
+void sClean::setClean(string path)
 {
 	redirStream(cleaned, path);
-	// if (cleaned.is_open()) {
-	// 	cleaned.clear();
-	// 	cleaned.close();
-	// }
-	// sClean::open(cleaned, path);
 }
 
-std::string sClean::getFullPath(bool instream) //true means it's the input path
-{ // just to quickly concatenate that
-std::string fpath = instream ? fipath : fopath;
+string sClean::getFullPath(bool instream) // true means it's the input path
+{											   // just to quickly concatenate that
+	string fpath = instream ? fipath : fopath;
 	fullPath = fpath + fname + ftype;
 	return fullPath;
 }
+
+string sClean::getTmpPath(bool instream) {
+	string fpath = instream ? fipath : fopath;
+	fullPath = fpath + tmpname + ftype;
+	return fullPath;
+}
+
 void sClean::resetLineNum() { numLines = 1; } // should be set to 1 bc getline starts w/line 1
 
-std::string sClean::findEl(std::string name, bool endpt)
+void sClean::findEl(string name)
 {
-	return (bool(endpt) ? "</" : "<") + name + ">";
+	el = name;
+	elStart = "<" + el + ">";
+	elEnd = "</" + el + ">";
+	//return (endpt ? "</" : "<") + name + ">";
 }
-std::string sClean::findEl(std::string name, std::string attributes, bool endpt)
+void sClean::findEl(string name, string attributes)
 {
-	return (endpt ? "</" : "<") + name + " " + attributes + ">";
+	el = name;
+	elStart = "<" + el + " " + attributes + ">";
+	elEnd = "</" + el + ">";
+	//return (endpt ? "</" : "<") + name + " " + attributes + ">";
 }
 
-void sClean::pDetect(std::vector<std::string>& pee, std::string l) {
-	if(std::regex_search(l, std::regex("(text-align|margin-left: \\d.\\d+)"))) {
+void sClean::pDetect(vector<string> &pee, string l)
+{
+	if (regex_search(l, regex("(text-align|margin-left: \\d.\\d+)")))
+	{
 		pee.push_back(l);
 	}
 }
-void sClean::spDetect(std::vector<std::string>& sp, std::string l) {
-	if (std::regex_search(l, std::regex("(text-decoration|white-space)"))) { 
-		sp.push_back(l);
-	}
-
-}
-
-void sClean::ruler(std::string str, std::string elname, std::string rule) {
-	std::string pat = elname + "." + elname[0] + "\\d+";
-	//std::string klass;
-	std::regex klass(".(\\w|\\d)+");
-	
-	//okay so. what this should now do is find the class name (so, like, locate the elname + the period, and then iterate until it hits a whitespace)
-	//and then, can do getline with ";" as its terminator, regexp each line for the rule name
-}
-
-void sClean::open(std::fstream &stream, std::string path)
-{ // know that this is static
-	if (!stream.is_open())
+//void sClean::spDetect(vector<string> &sp, string l)
+void sClean::spDetect(vector<vector<string>> &sp, string l)
+{
+	// cout << "this rule has a match! here's the full string we'll be looking at: \n\n" << l << "\n\n";
+	string rule{"(text-decoration|white-space)"};
+	if (regex_search(l, regex(rule)))
 	{
-		// std::cout << "the stream is not open. let us open it to " << path << std::endl;
-		try
-		{
-			stream.open(path); // first check to make sure i didn't just forget to open it
-			//std::cout << &stream;
-			sClean::open(stream, path); //yeah sure. let's try recursion. i'm sure this won't go wrong.
-		}
-		catch (std::error_code)
-		{
-			// std::cout << "that did not work. let us make a new file i guess!\n";
+		// sp.push_back(l);
+		cssRules r;
+		r.ruler(l, "span", rule);
+		//sp.push_back(r.rules);
+		//auto a = r.rules;
+		sp.push_back(r.getRules());
+	}
+}
+
+void sClean::open(fstream &stream, string path)
+{ // know that this is static
+// bool tried{false};
+// bool created{false};
+	if (!stream.is_open()) //if for some reason it failed to open, or i just forgot
+	{
+		stream.open(path);
+		if (!stream.is_open()) { //this had originally been recursive but for some reason it broke. not like it should've gone through more than two layers i guess
+			// stream.close();
 			stream.clear();
-			stream.open(path, std::ios::out); // if the file doesn't already exist, make it
+			stream.open(path, ios::out);
 			stream.close();
 			stream.open(path);
 		}
+		// try {
+		// 	stream.open(path);
+		// 	sClean::open(stream, path);
+		// } catch (error_code) {
+		// 	stream.close();
+		// 	//stream.clear();
+		// 	stream.open(path, ios::out);
+		// 	stream.close();
+		// 	stream.open(path);
+		
+		// try
+		// {
+		// 	stream.open(path); // first check to make sure i didn't just forget to open it
+		// 	cout << "\naddress of the file stream: " << &stream << "\t\twe are trying to open: " << path;
+		// 	bool aaa{stream.is_open()};
+		// 	if (!aaa) {
+		// 		cout << "\nit did not open. let us create it then.";
+		// 		stream.clear();
+		// 		stream.open(path, ios::out);
+		// 		cout << "\nit should have been made now!";
+		// 		stream.close();
+		// 		stream.open(path);
+		// 	}
+		// 	// sClean::open(stream, path); // yeah sure. let's try recursion. i'm sure this won't go wrong.
+		// 	// sClean::open(stream, path); // yeah sure. let's try recursion. i'm sure this won't go wrong.
+		// 	//sClean::openLoops++;
+		// }
+		// //catch (error_code e)
+		// catch(exception)
+		// {
+		// 	// cout << "that did not work. let us make a new file i guess!\n";
+		// 	stream.clear();
+		// 	cout << "\nwell that didn't work." << endl;
+		// 	stream.open(path, ios::out); // if the file doesn't already exist, make it
+		// 	stream.close();
+		// 	stream.open(path);
+		// }
 	}
+}
+
+void sClean::open(fstream &stream, string path, bool append) {
+	if (!stream.is_open()) {
+		stream.open(path, ios_base::app);
+		if (!stream.is_open()) {
+			stream.clear();
+			stream.open(path, ios::out);
+			stream.close();
+			stream.open(path, ios_base::app);
+		}
+	}
+}
+
+void sClean::executor() { //so how this should probably work to keep everything inside one while loop is that the major functions like findStyle() and stuff, when they're done running, they should basically switch the findEl w/in them, rather than have it happen here in the executor
+	inputName(); //input the name
+
+	setType("html");
+	// sClean::open(rawStream, getFullPath());
+	setRaw(getFullPath(true)); //these automatically open the streams
+
+	// fstream cleanStream;
+	setType("css"); // yeah they're getting hard-coded
+	setClean(getFullPath(false)); // automatically opens the stream
+	// sClean::open(cleanStream, getFullPath());
+	resetLineNum(); //reset the current line number
+	//el = "style";
+	findEl("style", "type=\"text/css\""); //sets the private regexps for el start n end, in this case for the styling
+
+	while (getline(raw, temp)) {
+		if (raw.eof()) {
+			cout << "\nEnd of file.\nOutput may be found in " << getFullPath(false) << ".\n";
+			foundEl = false; //set this to false for subsequent runs it seems
+			break;
+		}
+		if (regex_search(temp, elEnd)) {
+			cout << "\nEnd of " << el << " found on line " << numLines << ".\n";
+		}
+		if (foundEl) {
+			// switch(el) {
+			// 	case "style": {}
+
+			// }
+			if (!styleSw) {
+				findStyle(); // if the style switch is off, then do findStyle();
+			} else if (!bodySw) {
+				sanitize(); // otherwise, we're sanitizing the body
+			}
+			
+			// cleaned << temp << endl; //the findStyle() and sanitize() f'ns are pretty much just to transform temp into smth clean
+			cleaned << temp;
+		}
+		if (regex_search(temp, elStart)) {
+			foundEl = true;
+			cout << "Start of " << el << " found on line " << numLines << ".\n";
+		}
+		numLines++;
+	}
+
+	// findStyle();
+
+	// setType("html"); //set the type to html for the sanitizer output
+	// // setName(fname + "_temp"); //change the name
+	// setClean(getFullPath(false)); //redirect
+	// foundEl = false; //reset this for the sanitizer lol 
+	// findEl("body");
+	// sanitize();
 }
