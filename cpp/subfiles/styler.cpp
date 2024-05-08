@@ -101,7 +101,7 @@ void sClean::sanitize()
 			if (regex_search(temp, regex("class=\""+impP[i][1]+"\""))) {
 				cout << "this paragraph is supposed to have a replacement done. behold the raw:\n\t" << temp << endl;
 				cleanP = true;
-				strPt = &impP[i];
+				strPt = &(impP[i]);
 				// ruleVec = &impP[i];
 				break;
 			}
@@ -115,7 +115,10 @@ void sClean::sanitize()
 		// 	}
 		// }
 		if (cleanP) {
-			
+			// string rule = *strPt[2];
+			// cout << "strPt[2] rule: " << rule << endl;
+			// cout << "&string pointer [2]: " << *(strPt[2]) << endl;
+			// rule = nullptr;
 		} else {
 			temp = regex_replace(temp, regex("<p "+anyClass+">"), "<p>"); // otherwise just replace the class
 		}
@@ -339,8 +342,8 @@ void sClean::reset()
 	impP = {{}};
 	impSp = {{}};
 	//set the pointers to null just in case
-	// strPt = nullptr;
-	// vpt = nullptr;
+	strPt = nullptr;
+	vpt = nullptr;
 }
 
 void sClean::executor()

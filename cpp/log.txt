@@ -1,0 +1,18 @@
+[2024-05-08 15:00:37]: the vector of important p's: 
+[2024-05-08 15:00:37]:
+Layer 0 of the 2D vector:
+p | p3 |  text-align |  right | 
+Layer 1 of the 2D vector:
+p | p6 |  text-align |  center | 
+Layer 2 of the 2D vector:
+p | p7 |  text-align |  center | 
+Layer 3 of the 2D vector:
+p | p8 |  text-align |  right | 
+[2024-05-08 15:00:37]: the vector of important spans: 
+[2024-05-08 15:00:37]:
+Layer 0 of the 2D vector:
+span | s12 |  text-decoration |  underline | 
+Layer 1 of the 2D vector:
+span | s9 |  text-decoration |  underline | 
+Layer 2 of the 2D vector:
+span | Scrivener-tab-span |  white-space | pre | 

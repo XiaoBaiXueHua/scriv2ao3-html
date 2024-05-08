@@ -22,10 +22,10 @@ public:
 		raw.close();
 		// cleaned.clear();
 		cleaned.close();
-		// vpt = nullptr;
-		// strPt = nullptr;
-		// delete vpt;
-		// delete strPt;
+		vpt = nullptr;
+		strPt = nullptr;
+		delete vpt;
+		delete strPt;
 	};
 
 	//void findStyle(std::fstream &, std::string);
