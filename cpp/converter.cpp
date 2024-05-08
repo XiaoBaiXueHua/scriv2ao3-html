@@ -15,12 +15,6 @@ using namespace std;
 
 int main()
 {
-	//chrono::system_clock aa;
-	// time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now()); // https://en.cppreference.com/w/cpp/chrono/time_point
-	// //const std::time_t t_c = std::chrono::system_clock::to_time_t(now - 24h);
-	// //const auto t_c = chrono::system_clock::to_time_t(now - 24h);
-	// // string now= to_string(chrono::system_clock::now());
-	// cout << "The current time is: [" << put_time(localtime(&now), "%F %T.]\n") << endl;
 	char ans{'y'}, changeDir{'n'};
 	string dir{""};
 
@@ -41,11 +35,7 @@ int main()
 				scriv.setiPath(dir);
 				cout << endl;
 			}
-			// scriv.inputName();
 		}
 	}
-	
-	
-	// cout << "The script finished at: [" << put_time(localtime(&now), "%F %T.]\n");
 	return 0;
 }

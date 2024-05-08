@@ -52,7 +52,7 @@ void sClean::findStyle()
 		smatch m;
 		if (regex_search(temp, m, regex("(p|span|h\\d)."))) {
 			string mstr = m.str().substr(0, m.str().length()-1); // pop off the .
-			auto vpt = new vector<vector<string>>; 
+			// auto vpt = new vector<vector<string>>; 
 			if (mstr == "p") {
 				vpt = &impP;
 			} else if (mstr == "span") {
@@ -85,9 +85,46 @@ void sClean::sanitize()
 	// 	//  temp = regex_replace(temp, regex("&#34;"), "\"");
 	// 	//  cleaned << temp << endl; // later remove the endl so that we can have another function clean up the misnesting, but for now just print it so we can seeeee it
 	// }
+	if (regex_search(temp, elEnd)) { 
+		foundEl = false; 
+		bodySw = true; 
+		setClean(getFullPath(false));
+		}
 	if (foundEl)
 	{
+		// regex klass("class=\".+\"");
+		bool cleanP{false};
+		string anyClass{"class=\"(\\w|\\d)+\""};
+		int i{0};
+		// auto ruleVec = new vector<string>; //pointer for the correct vector
+		while (i < impP.size()) {
+			if (regex_search(temp, regex("class=\""+impP[i][1]+"\""))) {
+				cout << "this paragraph is supposed to have a replacement done. behold the raw:\n\t" << temp << endl;
+				cleanP = true;
+				strPt = &impP[i];
+				// ruleVec = &impP[i];
+				break;
+			}
+			i++; // you fool. do not forget to iterate
+		}
+		// for (auto p : impP) {
+		// 	if (regex_search(temp, regex("class=\""+p[1]+"\""))) {
+		// 		cout << "this paragraph is supposed to have a replacement done. behold the raw:\n\t" << temp << endl;
+		// 		cleanP = true;
+		// 		break;
+		// 	}
+		// }
+		if (cleanP) {
+			
+		} else {
+			temp = regex_replace(temp, regex("<p "+anyClass+">"), "<p>"); // otherwise just replace the class
+		}
+		// so each paragraph is in temp, so
 		cleaned << temp;
+
+		//and then at the end, delete
+		// ruleVec = nullptr;
+		// delete ruleVec;
 	}
 	if (regex_search(temp, elStart))
 	{
@@ -178,6 +215,7 @@ void sClean::findEl(string name, string attributes)
 void sClean::Detector(vector<vector<string>>&els, string elm, string l) {
 	regex rule("(text-align|margin-left|text-decoration|white-space)"); // this covers both p and sp and yeah it's getting hard-coded for now
 	if (regex_search(l, rule)) {
+
 		// cout << "this is a relevant " << elm << " rule! here's the full string we'll be looking at:\n" << l << "\n\n";
 		vector<string> r;
 		r.push_back(elm);
@@ -196,82 +234,34 @@ void sClean::Detector(vector<vector<string>>&els, string elm, string l) {
 				// string mstr = mitch.str();
 				if (mitch.str() == "margin-left") {
 					if (regex_search(mitch.str(), regex("\\d.\\d+"))) { //have to make sure this is, like. a proper blockquote el
-						r.push_back(temp2); // since we should've cut off the curly brackets, go ahead and push the whole thing back
+						// r.push_back(temp2); // since we should've cut off the curly brackets, go ahead and push the whole thing back
+						ruler(r, temp2);
 					}
 				} else {
-					r.push_back(temp2);
+					// r.push_back(temp2);
+					ruler(r, temp2);
 				}
 			}
 		}
 		if (r.size() > 2) { //have to have at least 2 rules in order to be worth pushing back
 			els.push_back(r); // and now finally. push the vector back into the master vector. though could probably also add in an additional clause to make sure it doesn't already match smth, that'll probably just overcomplicate things in the end
 		}
-		
 	}
 }
-// void sClean::pDetect(vector<string> &pee, string l)
-// {
-// 	if (regex_search(l, regex("(text-align|margin-left: \\d.\\d+)")))
-// 	{
-// 		pee.push_back(l);
-// 	}
-// }
-// // void sClean::spDetect(vector<string> &sp, string l)
-// void sClean::spDetect(vector<vector<string>> &sp, string l)
-// {
-// 	cout << "this is a span rule! here's the full string we'll be looking at: \n"
-// 		 << l << "\n\n";
-// 	string rule{"(text-decoration|white-space)"};
-// 	if (regex_search(l, regex(rule)))
-// 	{
-
-// 		vector<string> r;
-// 		r.push_back("span");
-// 		const regex klass("span.(\\S)+"); //for now just have it be anything that's not a space. if necessary, we can make it more 
-// 		smatch mitch; // submatch for the class name in the line
-// 		if (regex_search(l, mitch, klass)) {
-// 			// string str = mitch.str();
-// 			// cout << "klass match: " << str << endl;
-			
-// 		}
-
-// 		string temp2;
-// 		istringstream line;
-// 		line.str(l);
-// 		// line.str(l);
-// 		// getline()
-// 		while (getline(line, temp2, ';'))
-// 		{
-// 			cout << temp2 << endl;
-// 			cout << "there is a submatch on this line: ";
-// 			if (regex_match(temp2, mitch, regex(rule)))
-// 			{ // yeah let's reuse the submatch why not!!
-// 				cout << "true.\n";
-// 				if ((mitch.size()) == 2)
-// 				{
-// 					string ma = mitch[1].str();
-// 					r.push_back(ma);												// so we push back the rule
-// 					r.push_back(temp2.substr(ma.length() + 2, temp2.length() - 1)); // removes the rule name n the semicolon to push in the value
-// 					cout << "pushing back the last of the matches i guess!\n";
-// 				}
-// 			}
-// 			else
-// 			{
-// 				cout << "false.\n";
-// 			}
-// 		}
-
-// 		// cssRules r;
-// 		// r.ruler(l, "span", rule);
-// 		// loggy(r);
-// 		// sp.push_back(r.getRules());
-// 		sp.push_back(r);
-// 	}
-// 	else
-// 	{
-// 		cout << "However, it doesn't have any rules worth looking at.\n";
-// 	}
-// }
+void sClean::ruler(vector<string>&v, string str) { //because it seems we cannot have local functions in c++ :pepehands:
+	// so basically, we need to find the position of the ':' using regexp. we cut the rule off there. 
+	string t;
+	istringstream s;
+	s.str(str);
+	do { //have to do a do-while in order for it to pick up the whole thing for some reason. who knows why!
+		if (!t.empty()) { // however, in doing so, we must also make sure that we don't push back the first empty string
+			v.push_back(t);
+		}
+	} while (getline(s, t, ':'));
+	// while (getline(s, t, ':')); { //wait i'm stupid we can just do getline
+	// 	v.push_back(t);
+	// }
+}
 
 void sClean::open(fstream &stream, string path)
 {						   // know that this is static
@@ -337,19 +327,6 @@ void sClean::loggy(vector<vector<string>> &strs)
 	}
 }
 
-// void sClean::loggy(cssRules a) {
-// 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-// 	logger << put_time(localtime(&now), "[%F %T] cssRules obj:\n");
-// 	logger << a;
-// 	}
-
-// string sClean::logTime() {
-// 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-// 	// chrono::system_clock::from_time_t
-// 	// string a = put_time(localtime(&now), "%F %T]");
-// 	return put_time(localtime(&now), "[%F %T]");
-// }
-
 void sClean::reset()
 { // sets all the els back to false and closes all the streams
 	numLines = 1;
@@ -361,6 +338,9 @@ void sClean::reset()
 	cleaned.close();
 	impP = {{}};
 	impSp = {{}};
+	//set the pointers to null just in case
+	// strPt = nullptr;
+	// vpt = nullptr;
 }
 
 void sClean::executor()
