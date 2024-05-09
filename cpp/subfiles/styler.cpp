@@ -46,18 +46,10 @@ sClean::sClean()
 }
 sClean::sClean(string path)
 {
-	// inputName();
 	setiPath(path);
 	setoPath("output");
-
-	// diffInPath = true;
-	// defaultInPath = path;
 }
 
-// void sClean::findStyle(fstream &rawStream, string name)
-// void sClean::findStyle(string name)
-
-// i think later transfer the getline() loop to executor() so that it can iterate through the entire source file exactly one time
 void sClean::findStyle()
 { // takes the raw stream bc it will open the cleaned stream w/in the function. also the raw stream should be an html file
 	if (regex_search(temp, elEnd))
@@ -102,8 +94,8 @@ void sClean::sanitize()
 	{
 		foundEl = false;
 		bodySw = true;
-		setRaw(getFullPath(true));
-		setClean(getFullPath(false));
+		// setRaw(getFullPath(true));
+		// setClean(getFullPath(false));
 	}
 	if (foundEl)
 	{
@@ -127,6 +119,7 @@ void sClean::sanitize()
 
 void sClean::nester() {
 	// there has got to be a way to do this efficiently even w/large files... since we're working w/streams here, then maybe do peek during the sanitize step of the blockClean()
+
 }
 
 void sClean::inputName()
@@ -409,8 +402,8 @@ void sClean::reset()
 	raw.clear();
 	cleaned.close();
 	cleaned.clear();
-	impP = {{}};
-	impSp = {{}};
+	impP = {};
+	impSp = {};
 	// set the pointers to null just in case
 	strPt = nullptr;
 	vpt = nullptr;
@@ -459,13 +452,10 @@ void sClean::executor()
 			else if (!bodySw)
 			{
 				sanitize(); // otherwise, we're sanitizing the body
-				if (numLines%25 == 0) { //log every 10 lines bc i'm not trying to be that much of a menace
-					loggy(el + " " + to_string(numLines) +": " + temp);
-				}
+				// if (numLines%25 == 0) { //log every 10 lines bc i'm not trying to be that much of a menace
+				// 	loggy(el + " " + to_string(numLines) +": " + temp);
+				// }
 			}
-
-			// cleaned << temp << endl; //the findStyle() and sanitize() f'ns are pretty much just to transform temp into smth clean
-			// cleaned << temp << (lBreak ? "\n" : "");
 		}
 		if (regex_search(temp, elStart))
 		{
@@ -475,7 +465,10 @@ void sClean::executor()
 		}
 		numLines++;
 	}
-
+	
+	// reset these outside of the while loop in order to keep it from looping twice.
+	setRaw(getTmpPath(false)); 
+	setClean(getFullPath(false));
 	nester(); // then finally, take the temp file and output it somewhere proper
 
 	reset();
