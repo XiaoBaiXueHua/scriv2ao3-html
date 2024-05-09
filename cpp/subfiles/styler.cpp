@@ -5,12 +5,30 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cctype>
+#include <locale>
 #include <iterator>
 #include <regex>
 #include <chrono>
 #include "./styler.h"
 
 using namespace std;
+
+//trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
+inline void ltrim(string &s) {
+	s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char ch) { return !isspace(ch);}));
+};
+inline void rtrim(string &s) {
+	s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !isspace(ch);}).base(), s.end());
+}
+inline void vtrim(string &s) {
+	rtrim(s);
+	ltrim(s);
+}
+string trim(string &s) {
+	vtrim(s);
+	return s;
+}
 
 sClean::sClean()
 {
@@ -50,12 +68,16 @@ void sClean::findStyle()
 	if (foundEl)
 	{
 		smatch m;
-		if (regex_search(temp, m, regex("(p|span|h\\d)."))) {
-			string mstr = m.str().substr(0, m.str().length()-1); // pop off the .
-			// auto vpt = new vector<vector<string>>; 
-			if (mstr == "p") {
+		if (regex_search(temp, m, regex("(p|span|h\\d).")))
+		{
+			string mstr = m.str().substr(0, m.str().length() - 1); // pop off the .
+			// auto vpt = new vector<vector<string>>;
+			if (mstr == "p")
+			{
 				vpt = &impP;
-			} else if (mstr == "span") {
+			}
+			else if (mstr == "span")
+			{
 				vpt = &impSp;
 			}
 			Detector(*vpt, mstr, temp);
@@ -85,11 +107,12 @@ void sClean::sanitize()
 	// 	//  temp = regex_replace(temp, regex("&#34;"), "\"");
 	// 	//  cleaned << temp << endl; // later remove the endl so that we can have another function clean up the misnesting, but for now just print it so we can seeeee it
 	// }
-	if (regex_search(temp, elEnd)) { 
-		foundEl = false; 
-		bodySw = true; 
+	if (regex_search(temp, elEnd))
+	{
+		foundEl = false;
+		bodySw = true;
 		setClean(getFullPath(false));
-		}
+	}
 	if (foundEl)
 	{
 		// regex klass("class=\".+\"");
@@ -97,9 +120,11 @@ void sClean::sanitize()
 		string anyClass{"class=\"(\\w|\\d)+\""};
 		int i{0};
 		// auto ruleVec = new vector<string>; //pointer for the correct vector
-		while (i < impP.size()) {
-			if (regex_search(temp, regex("class=\""+impP[i][1]+"\""))) {
-				cout << "this paragraph is supposed to have a replacement done. behold the raw:\n\t" << temp << endl;
+		while (i < impP.size())
+		{
+			if (regex_search(temp, regex("class=\"" + impP[i][1] + "\"")))
+			{
+				// cout << "this paragraph is supposed to have a replacement done. behold the raw:\n\t" << temp << endl;
 				cleanP = true;
 				strPt = &(impP[i]);
 				// ruleVec = &impP[i];
@@ -107,6 +132,7 @@ void sClean::sanitize()
 			}
 			i++; // you fool. do not forget to iterate
 		}
+
 		// for (auto p : impP) {
 		// 	if (regex_search(temp, regex("class=\""+p[1]+"\""))) {
 		// 		cout << "this paragraph is supposed to have a replacement done. behold the raw:\n\t" << temp << endl;
@@ -114,20 +140,45 @@ void sClean::sanitize()
 		// 		break;
 		// 	}
 		// }
-		if (cleanP) {
-			// string rule = *strPt[2];
+		// for now these get hard coded
+		string emt{"p"};	// default element is just a p
+		string rpls; // this is the value to be replaced
+		if (cleanP)
+		{
+			string key = (*strPt)[2];
+			string value = (*strPt)[3];
+			// cout << "relevant strPt vals: " << setw(10) << key << ": " << setw(10) << value << endl;
+			if (key == "text-align")
+			{
+				// replace the class w/ align=value
+				// temp = regex_replace(temp, regex(anyClass), "align=\""+value+"\"");
+				rpls = "<" + emt + " align=\"" + value + "\">";
+			}
+			else if (key == "margin-left")
+			{
+				// replace the entire p w/a bqt
+				emt = "blockquote"; // yay hard-coding :D
+				rpls = "<" + emt + ">";
+				temp = regex_replace(temp, regex("</p>"), "</blockquote>"); //hard-code this for now
+			}
+			// cout << "(*strPt)[2]: " << key << " and (*strPt)[3]: " << value << endl;
 			// cout << "strPt[2] rule: " << rule << endl;
 			// cout << "&string pointer [2]: " << *(strPt[2]) << endl;
 			// rule = nullptr;
 		} else {
-			temp = regex_replace(temp, regex("<p "+anyClass+">"), "<p>"); // otherwise just replace the class
+			rpls = "<p>";
 		}
+		// else
+		// {
+		// 	temp = regex_replace(temp, regex("<p " + anyClass + ">"), "<p>"); // otherwise just replace the class
+		// }
+		temp = regex_replace(temp, regex("<p " + anyClass + ">"), rpls);
 		// so each paragraph is in temp, so
 		cleaned << temp;
 
-		//and then at the end, delete
-		// ruleVec = nullptr;
-		// delete ruleVec;
+		// and then at the end, delete
+		//  ruleVec = nullptr;
+		//  delete ruleVec;
 	}
 	if (regex_search(temp, elStart))
 	{
@@ -214,51 +265,63 @@ void sClean::findEl(string name, string attributes)
 	// loggy(vector<string>{"looking for: " + name, "with regexp start: <" + el + " " + attributes +  "> and regexp end: </" + el + ">"});
 }
 
-
-void sClean::Detector(vector<vector<string>>&els, string elm, string l) {
+void sClean::Detector(vector<vector<string>> &els, string elm, string l)
+{
 	regex rule("(text-align|margin-left|text-decoration|white-space)"); // this covers both p and sp and yeah it's getting hard-coded for now
-	if (regex_search(l, rule)) {
+	if (regex_search(l, rule))
+	{
 
 		// cout << "this is a relevant " << elm << " rule! here's the full string we'll be looking at:\n" << l << "\n\n";
 		vector<string> r;
 		r.push_back(elm);
-		const regex klass(elm+".(\\S)+");
+		const regex klass(elm + ".(\\S)+");
 		smatch mitch;
-		if (regex_search(l, mitch, klass)) {
-			r.push_back(mitch.str().substr(elm.length()+1, mitch.str().length())); // should return just the class name
+		if (regex_search(l, mitch, klass))
+		{
+			r.push_back(mitch.str().substr(elm.length() + 1, mitch.str().length())); // should return just the class name
 		}
-		l = regex_replace(l, regex("(\\{|\\}|"+mitch.str()+"|\\s{2,})"), ""); //clean off the curly brackets, as well as the class substring and 2+ spaces
+		l = regex_replace(l, regex("(\\{|\\}|" + mitch.str() + "|\\s{2,})"), ""); // clean off the curly brackets, as well as the class substring and 2+ spaces
 		string temp2;
 		istringstream line;
-		line.str(l);
+		line.str(trim(l));
 
-		while (getline(line, temp2, ';')) {
-			if (regex_search(temp2, mitch, rule)) {
-				// string mstr = mitch.str();
-				if (mitch.str() == "margin-left") {
-					if (regex_search(mitch.str(), regex("\\d.\\d+"))) { //have to make sure this is, like. a proper blockquote el
+		while (getline(line, temp2, ';'))
+		{
+			if (regex_search(temp2, mitch, rule))
+			{
+				string mstr = trim(mitch.str());
+				if (mstr == "margin-left")
+				{
+					if (regex_search(temp2, regex("\\d.\\d+")))
+					{ // have to make sure this is, like. a proper blockquote el
 						// r.push_back(temp2); // since we should've cut off the curly brackets, go ahead and push the whole thing back
 						ruler(r, temp2);
 					}
-				} else {
+				}
+				else
+				{
 					// r.push_back(temp2);
 					ruler(r, temp2);
 				}
 			}
 		}
-		if (r.size() > 2) { //have to have at least 2 rules in order to be worth pushing back
+		if (r.size() > 2)
+		{					  // have to have at least 2 rules in order to be worth pushing back
 			els.push_back(r); // and now finally. push the vector back into the master vector. though could probably also add in an additional clause to make sure it doesn't already match smth, that'll probably just overcomplicate things in the end
 		}
 	}
 }
-void sClean::ruler(vector<string>&v, string str) { //because it seems we cannot have local functions in c++ :pepehands:
-	// so basically, we need to find the position of the ':' using regexp. we cut the rule off there. 
+void sClean::ruler(vector<string> &v, string str)
+{ // because it seems we cannot have local functions in c++ :pepehands:
+	// so basically, we need to find the position of the ':' using regexp. we cut the rule off there.
 	string t;
 	istringstream s;
 	s.str(str);
-	do { //have to do a do-while in order for it to pick up the whole thing for some reason. who knows why!
-		if (!t.empty()) { // however, in doing so, we must also make sure that we don't push back the first empty string
-			v.push_back(t);
+	do
+	{ // have to do a do-while in order for it to pick up the whole thing for some reason. who knows why!
+		if (!t.empty())
+		{ // however, in doing so, we must also make sure that we don't push back the first empty string
+			v.push_back(trim(t));
 		}
 	} while (getline(s, t, ':'));
 	// while (getline(s, t, ':')); { //wait i'm stupid we can just do getline
@@ -341,7 +404,7 @@ void sClean::reset()
 	cleaned.close();
 	impP = {{}};
 	impSp = {{}};
-	//set the pointers to null just in case
+	// set the pointers to null just in case
 	strPt = nullptr;
 	vpt = nullptr;
 }

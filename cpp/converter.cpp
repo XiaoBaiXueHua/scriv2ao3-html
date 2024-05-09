@@ -16,7 +16,7 @@ using namespace std;
 int main()
 {
 	char ans{'y'}, changeDir{'n'}, instr{'n'};
-	bool showIns; //don't init, let it be saved in the program
+	bool showIns{true}; //don't init, let it be saved in the program
 	string dir{""};
 	if (!showIns) {
 		showIns = true;
