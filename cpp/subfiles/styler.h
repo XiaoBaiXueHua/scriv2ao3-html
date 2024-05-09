@@ -35,6 +35,8 @@ public:
 
 	void sanitize();
 
+	void nester();
+
 	void findEl(std::string);
 	void findEl(std::string, std::string); //overloading for when you want to find an element w/a particular param, like how <style> has "type=text/css" in it.
 	void redirStream(std::fstream &, std::string);
@@ -46,8 +48,9 @@ public:
 
 	//f'ns for pushing the important style rules into a vector
 	void Detector(std::vector<std::vector<std::string>>&, std::string, std::string);
-	void ruler(std::vector<std::string>& ,std::string);
-	//void ruler(std::string, std::string, std::string);
+	void ruler(std::vector<std::string>& ,std::string); // function for pushing the correct css keys n vals back correctly
+	void blockClean(std::string&);
+	void spClean(std::string&);
 
 	void executor(); // executes all the actions based on the filename provided by the string
 
