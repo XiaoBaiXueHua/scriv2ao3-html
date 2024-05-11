@@ -17,7 +17,6 @@ using namespace std;
 // bad practice global var bc im Do Not Believe it needs to be a private member. there's enough of these.
 string anyClass{"class=\"(\\w|\\d|-)+\""};
 
-
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
 inline void ltrim(string &s)
 {
@@ -303,8 +302,8 @@ void sClean::blockClean(string &tmp)
 		rpls += emt;
 		for (int i{1}; 2 * i < (*strPt).size(); i++)
 		{ // starts off w/2 bc values 0 & 1 are being used to hold the element + class names, then increase i by 2 bc the vector goes like key, value, key, value
-			try
-			{
+			// try
+			// {
 				string key = (*strPt)[2 * i];
 				string value = (*strPt)[2 * i + 1];
 				if (key == "text-align")
@@ -317,11 +316,11 @@ void sClean::blockClean(string &tmp)
 					rpls += "><p"; // nest in that extra <p> for when we're working w/bqt
 					rpls2 += "</p>";
 				}
-			}
-			catch (exception)
-			{
-				break;
-			}
+			// }
+			// catch (exception)
+			// {
+				// break;
+			// }
 		}
 		rpls += ">"; // then add in the closing bracket after the loop is done
 	}
@@ -334,51 +333,103 @@ void sClean::blockClean(string &tmp)
 	tmp = regex_replace(tmp, regex("</p>"), rpls2);				   // first remove the ending, in order to keep the blockquotes functioning properly
 	tmp = regex_replace(tmp, regex("<p " + anyClass + ">"), rpls); // then you can replace the opening element
 }
+
 void sClean::spClean(string &tmp)
 {
-	bool cleanSp{false};
 	// string anyClass{"class=\"(\\w|\\d|-)+\""}; // might just make this a private var for later use, but for now, just have it appear twice.
+	bool cleanSp{false};
+	vector<string> spInstances = {};
+	vector<vector<string>> spRules = {};
+	string currClass{""};
+	string Orpls{""}, Erpls{""};
+	// so first we determine if the current paragraph has any of the relevant classes
 	for (auto &sp : impSp)
 	{
-		if (regex_search(tmp, regex("class=\"" + sp[1] + "\"")))
+		currClass = "class=\"" + sp[1] + "\"";
+		if (regex_search(tmp, regex(currClass)))
 		{
 			cleanSp = true;
+			spInstances.push_back(sp[1]);
 			strPt = &(sp);
-			spClean(tmp, strPt);
-			// break;
+			// spClean(tmp, strPt);
+
+			// this loop determines the html replacements
+			for (int i{1}; 2 * i < (*strPt).size(); i++)
+			{ // so the spans remain labelled spans, since they're more likely to have multiple nestings. or at least have that chance to be
+				string key = (*strPt)[2 * i];
+				string value = (*strPt)[2 * i + 1];
+				if (key == "text-decoration")
+				{
+					Orpls += (value == "underline") ? "<ins>" : "<del>";			// if it's not an underline, then it's gonna be a strikethrough
+					Erpls = ((value == "underline") ? "</ins>" : "</del>") + Erpls; // nest it inside
+				}
+				else if (key == "background-color")
+				{
+					Orpls += "<mark>";
+					Erpls = "</mark>" + Erpls;
+				}
+			}
+			spRules.push_back({Orpls, Erpls});
 		}
 	}
 
-	// this is where it starts to diverge from the block clean
-	// like obviously we've already checked to see if there are Any important spans in here, bc if not, then like. just get rid of all the spans yippee
-	if (!cleanSp) // let's keep this for now
+	if (cleanSp)
 	{
-	// then at the end, clean up all the remaining spans
+		// regex spee("<span " + anyClass + ">((\\w|\\d|\\s)|^</span>)+</span>");
+		// regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "((\\w|\\d|\\s)+|^</span>)</span>");
+		regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "[^<]+</span>");
+		// regex spee("<span " + anyClass + ">((\\w|\\W)|^</span>)+</span>");
+		auto spStart = sregex_iterator(tmp.begin(), tmp.end(), spee); // so we basically have to pick out all the span elements
+		auto spEnd = sregex_iterator();
+		loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in :\n\t" + tmp);
+		// loggy("spRules (full): ");
+		// 			loggy(spRules);
+					// loggy("spRules["+to_string(j)+"]: ");
+					// loggy(spRules[j]);
+
+		int k{0};
+		for (sregex_iterator i = spStart; i != spEnd; i++)
+		{
+			Orpls = ""; Erpls = ""; // reset these w/every loop
+			// currClass = anyClass;	// reset this to anything at the start of each loop
+			// smatch m = *i;
+			string spn = (*i).str();
+			k++;
+			loggy("string match ["+ to_string(k) + "]: " + spn);
+			bool ma{false};
+			int j{0};
+			// find out if it's an instance to be replaced
+			// for (int j{0}; j < spInstances.size(); j++)
+			while (j < spInstances.size() && !ma)
+			{ // do this version since we're working with two vectors of the same size
+				currClass = "class=\"" + spInstances[j] + "\"";
+				if (regex_search(spn, regex(currClass)))
+				{
+					// cout << "this <span> matches one of our rules: " << tmp << endl;
+					Orpls = spRules[j][0];
+					Erpls = spRules[j][1];
+					// break;
+					ma = true;
+				}
+				j++;
+			}
+			string clean = regex_replace(spn, regex("<span " + anyClass + ">"), Orpls); // so first we clean up the submatch. bc we're only working w/one <span> at a time, we can just do anyClass
+			clean = regex_replace(clean, regex("</span>"), Erpls);						 // and then we clean
+			loggy("this should be the cleaned string: " + clean +"\n");
+			tmp = regex_replace(tmp, regex(spn), clean);
+		}
+	}
+	// else
+	// {
+	// if there are no instances, then go ahead n delete all spans indiscriminately
 	tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
 	tmp = regex_replace(tmp, regex("</span>"), "");
-	}
+	// }
 }
 
 // i should probably give this like a different name but also nah who needs good coding practices
 void sClean::spClean(string &s, vector<string> *ptr)
 {
-	string emt{""}, Orpls{""}, Erpls{""};
-	for (int i{1}; 2 * i < (*ptr).size(); i++)
-	{ // so the spans remain labelled spans, since they're more likely to have multiple nestings. or at least have that chance to be
-		string key = (*ptr)[2 * i];
-		string value = (*ptr)[2 * i + 1];
-		if (key == "text-decoration")
-		{
-			Orpls += (value == "underline") ? "<ins>" : "<del>";			// if it's not an underline, then it's gonna be a strikethrough
-			Erpls = ((value == "underline") ? "</ins>" : "</del>") + Erpls; // nest it inside
-		}
-		else if (key == "background-color")
-		{
-			Orpls += "<mark>";
-			Erpls = "</mark>" + Erpls;
-		}
-	}
-	// and then you have to actually, like. iterate through the thing... although it's possible that there are multiple relevant spans in a single paragraph, so. hmmmmmm....
 }
 
 void sClean::open(fstream &stream, string path)
@@ -415,6 +466,7 @@ void sClean::open(fstream &stream, string path, bool append)
 
 void sClean::loggy(string str)
 { // will try to make these friends later but for now. whatever i guess.
+
 	sClean::open(logger, "log.txt", true);
 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
 
