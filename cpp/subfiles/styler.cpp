@@ -5,12 +5,41 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cctype> // these were used in the trim example on stackoverflow
+#include <locale> // these were used in the trim example on stackoverflow
 #include <iterator>
 #include <regex>
 #include <chrono>
 #include "./styler.h"
 
 using namespace std;
+
+// bad practice global var bc im Do Not Believe it needs to be a private member. there's enough of these.
+string anyClass{"class=\"(\\w|\\d|-)+\""};
+
+// trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
+inline void ltrim(string &s)
+{
+	s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char ch)
+							   { return !isspace(ch); }));
+};
+inline void rtrim(string &s)
+{
+	s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char ch)
+					{ return !isspace(ch); })
+				.base(),
+			s.end());
+}
+inline void vtrim(string &s)
+{
+	rtrim(s);
+	ltrim(s);
+}
+string trim(string &s)
+{
+	vtrim(s);
+	return s;
+}
 
 sClean::sClean()
 {
@@ -20,26 +49,18 @@ sClean::sClean()
 }
 sClean::sClean(string path)
 {
-	// inputName();
 	setiPath(path);
 	setoPath("output");
-
-	// diffInPath = true;
-	// defaultInPath = path;
 }
 
-// void sClean::findStyle(fstream &rawStream, string name)
-// void sClean::findStyle(string name)
-
-// i think later transfer the getline() loop to executor() so that it can iterate through the entire source file exactly one time
 void sClean::findStyle()
 { // takes the raw stream bc it will open the cleaned stream w/in the function. also the raw stream should be an html file
 	if (regex_search(temp, elEnd))
-	{					// if we reached the end of the file or </style>
-		styleSw = true; // sets the permanent switch for found style to true
-		// lBreak = false;
-		foundEl = false;			 // this gets declared inside the findStyle and sanitize() functions
-		findEl("body");				 // okay so have to do it this way in order to make the css work correctly
+	{					 // if we reached the end of the file or </style>
+		styleSw = true;	 // sets the permanent switch for found style to true
+		foundEl = false; // this gets declared inside the findStyle and sanitize() functions
+		findEl("body");	 // okay so have to do it this way in order to make the css work correctly
+		loggy("findEl now searching for the body.");
 		setType("html");			 // changes the next file type to html
 		setClean(getTmpPath(false)); // switches the stream to the new tmp file
 		loggy("the vector of important p's: ");
@@ -50,49 +71,46 @@ void sClean::findStyle()
 	if (foundEl)
 	{
 		smatch m;
-		if (regex_search(temp, m, regex("(p|span|h\\d)."))) {
-			string mstr = m.str().substr(0, m.str().length()-1); // pop off the .
-			auto vpt = new vector<vector<string>>; 
-			if (mstr == "p") {
+		if (regex_search(temp, m, regex("(p|span|h\\d).")))
+		{
+			string mstr = m.str().substr(0, m.str().length() - 1); // pop off the .
+			// auto vpt = new vector<vector<string>>;
+			if (mstr == "p" || regex_match(mstr, regex("h\\d"))) // will now also include headers
+			{
 				vpt = &impP;
-			} else if (mstr == "span") {
+			}
+			else if (mstr == "span")
+			{
 				vpt = &impSp;
 			}
 			Detector(*vpt, mstr, temp);
-			vpt = nullptr;
-			delete vpt;
+			// vpt = nullptr;
+			// delete vpt;
 		}
-		// if (regex_search(temp, regex("p.p\\d+")))
-		// {
-		// 	// pDetect(impP, temp);
-		// }
-		// else if (regex_search(temp, regex("span.(s\\d+|Scrivener-converted-space)")))
-		// {
-		// 	// spDetect(impSp, temp);
-		// 	Detector(impSp, "span", temp);
-		// }
 		cleaned << temp << endl;
 	}
 }
 
 void sClean::sanitize()
 {
-	// while (getline(raw, temp)) {
-	// if (raw.eof() || regex_search(temp, elEnd)) {
-	// 	cout << "reached the end of the file or smth idk." << endl;
-	// }
-	// if (foundEl) {
-	// 	//  temp = regex_replace(temp, regex("&#34;"), "\"");
-	// 	//  cleaned << temp << endl; // later remove the endl so that we can have another function clean up the misnesting, but for now just print it so we can seeeee it
-	// }
+	if (regex_search(temp, elEnd))
+	{
+		foundEl = false;
+		bodySw = true;
+		// setRaw(getFullPath(true));
+		// setClean(getFullPath(false));
+	}
 	if (foundEl)
 	{
+		blockClean(temp); // first clean the block
+		spClean(temp);	  // then clean the in-lines
+		// so each paragraph is in temp, so
 		cleaned << temp;
 	}
-	if (regex_search(temp, elStart))
-	{
-		foundEl = true;
-	}
+	// if (regex_search(temp, elStart))
+	// {
+	// 	foundEl = true;
+	// }
 
 	// }
 	// okay so. what this does is that it continues to iterate through the html file.
@@ -100,6 +118,11 @@ void sClean::sanitize()
 	// for the p's, if it doesn't match any allowed classes, then just remove the class name. for the spans, remove the entire el if it doesn't fit. if it does, then for both, replace just the el + class w/the correct semantic name, and then replace the nearest closing sp/p with the correct closing el as well
 	// when outputting the html this first time, don't have the endl, and keep it in a temp file, which will get deleted at the end.
 	// the temp file is then read to further sanitize by checking for misnesting and the like all at once
+}
+
+void sClean::nester()
+{
+	// there has got to be a way to do this efficiently even w/large files... since we're working w/streams here, then maybe do peek during the sanitize step of the blockClean()
 }
 
 void sClean::inputName()
@@ -132,12 +155,12 @@ void sClean::redirStream(fstream &stm, string path)
 }
 void sClean::setRaw(string path)
 {
-	// loggy("the raw stream path has been set to: " + path);
+	loggy("the raw stream path has been set to: " + path);
 	redirStream(raw, path);
 }
 void sClean::setClean(string path)
 {
-	// loggy("the output path has been set to: " + path);
+	loggy("the output path has been set to: " + path);
 	redirStream(cleaned, path);
 }
 
@@ -174,104 +197,240 @@ void sClean::findEl(string name, string attributes)
 	// loggy(vector<string>{"looking for: " + name, "with regexp start: <" + el + " " + attributes +  "> and regexp end: </" + el + ">"});
 }
 
+// might turn this into its own class later tbh. otherwise, we need to store a var for, like, the default font size (which will probably be hard to determine this way... although maybe look at the spans when going through them and then seeing which one is closer to 1rem? and then storing larger and smaller spans for use of <big> and <small> later), default font name (in order to determine <pre> and <code> elements)
+void sClean::Detector(vector<vector<string>> &els, string elm, string l)
+{
+	regex rule("(text-align|margin-left|text-decoration|background-color)"); // this covers both p and sp and yeah it's getting hard-coded for now
+	if (regex_search(l, rule))
+	{
 
-void sClean::Detector(vector<vector<string>>&els, string elm, string l) {
-	regex rule("(text-align|margin-left|text-decoration|white-space)"); // this covers both p and sp and yeah it's getting hard-coded for now
-	if (regex_search(l, rule)) {
 		// cout << "this is a relevant " << elm << " rule! here's the full string we'll be looking at:\n" << l << "\n\n";
 		vector<string> r;
 		r.push_back(elm);
-		const regex klass(elm+".(\\S)+");
+		const regex klass(elm + ".(\\S)+");
 		smatch mitch;
-		if (regex_search(l, mitch, klass)) {
-			r.push_back(mitch.str().substr(elm.length()+1, mitch.str().length())); // should return just the class name
+		if (regex_search(l, mitch, klass))
+		{
+			r.push_back(mitch.str().substr(elm.length() + 1, mitch.str().length())); // should return just the class name
 		}
-		l = regex_replace(l, regex("(\\{|\\}|"+mitch.str()+"|\\s{2,})"), ""); //clean off the curly brackets, as well as the class substring and 2+ spaces
+		l = regex_replace(l, regex("(\\{|\\}|" + mitch.str() + "|\\s{2,})"), ""); // clean off the curly brackets, as well as the class substring and 2+ spaces
 		string temp2;
 		istringstream line;
-		line.str(l);
+		line.str(trim(l));
 
-		while (getline(line, temp2, ';')) {
-			if (regex_search(temp2, mitch, rule)) {
-				// string mstr = mitch.str();
-				if (mitch.str() == "margin-left") {
-					if (regex_search(mitch.str(), regex("\\d.\\d+"))) { //have to make sure this is, like. a proper blockquote el
-						r.push_back(temp2); // since we should've cut off the curly brackets, go ahead and push the whole thing back
+		while (getline(line, temp2, ';'))
+		{
+			if (regex_search(temp2, mitch, rule))
+			{
+				string mstr = trim(mitch.str());
+				if (mstr == "margin-left")
+				{
+					if (regex_search(temp2, regex("\\d.\\d+")))
+					{ // have to make sure this is, like. a proper blockquote el
+						// r.push_back(temp2); // since we should've cut off the curly brackets, go ahead and push the whole thing back
+						ruler(r, temp2);
+						if (!regex_match(r[0], regex("h\\d")))
+						{
+							r[0] = "blockquote"; // so we can, like. i can't explain myself rn it'll be used in the sanitization process
+						}
 					}
-				} else {
-					r.push_back(temp2);
+				}
+				else
+				{
+					// r.push_back(temp2);
+					ruler(r, temp2);
+					// if (r[2] == "text-decoration")
+					// { // later, we'll have to loop these in order to ensure we get all the correct rules in and not just the first one that shows up, but for now, just hard-code it
+					// 	if (r[0] != "p" || !regex_search(r[0], regex("h\\d")))
+					// 	{
+					// 		if (r[3] == "underline")
+					// 		{
+					// 			r[0] = "ins"; // i Think this is the more semantic version of <u>
+					// 		}
+					// 		else if (r[3] == "line-through")
+					// 		{
+					// 			r[0] = "del";
+					// 		}
+					// 	}
+					// }
+					// else if (r[2] == "background-color")
+					// {
+					// 	r[0] = "mark";
+					// }
 				}
 			}
 		}
-		if (r.size() > 2) { //have to have at least 2 rules in order to be worth pushing back
+		if (r.size() > 2)
+		{					  // have to have at least 2 rules in order to be worth pushing back
 			els.push_back(r); // and now finally. push the vector back into the master vector. though could probably also add in an additional clause to make sure it doesn't already match smth, that'll probably just overcomplicate things in the end
 		}
-		
 	}
 }
-// void sClean::pDetect(vector<string> &pee, string l)
-// {
-// 	if (regex_search(l, regex("(text-align|margin-left: \\d.\\d+)")))
-// 	{
-// 		pee.push_back(l);
-// 	}
-// }
-// // void sClean::spDetect(vector<string> &sp, string l)
-// void sClean::spDetect(vector<vector<string>> &sp, string l)
-// {
-// 	cout << "this is a span rule! here's the full string we'll be looking at: \n"
-// 		 << l << "\n\n";
-// 	string rule{"(text-decoration|white-space)"};
-// 	if (regex_search(l, regex(rule)))
-// 	{
+void sClean::ruler(vector<string> &v, string str)
+{ // because it seems we cannot have local functions in c++ :pepehands:
+	// so basically, we need to find the position of the ':' using regexp. we cut the rule off there.
+	string t;
+	istringstream s;
+	s.str(str);
+	do
+	{ // have to do a do-while in order for it to pick up the whole thing for some reason. who knows why!
+		if (!t.empty())
+		{ // however, in doing so, we must also make sure that we don't push back the first empty string
+			v.push_back(trim(t));
+		}
+	} while (getline(s, t, ':'));
+}
+void sClean::blockClean(string &tmp)
+{
+	bool cleanP{false};
+	for (auto &p : impP)
+	{
+		if (regex_search(tmp, regex("class=\"" + p[1] + "\"")))
+		{
+			cleanP = true;
+			strPt = &(p);
+			break;
+		}
+	}
 
-// 		vector<string> r;
-// 		r.push_back("span");
-// 		const regex klass("span.(\\S)+"); //for now just have it be anything that's not a space. if necessary, we can make it more 
-// 		smatch mitch; // submatch for the class name in the line
-// 		if (regex_search(l, mitch, klass)) {
-// 			// string str = mitch.str();
-// 			// cout << "klass match: " << str << endl;
-			
-// 		}
+	// for now these get hard coded
+	string emt{"p"};			 // default element is just a p
+	string rpls{"<"}, rpls2{""}; // these are the value to be replaced. starts w/just the opening corner bracket as the string will have stuff appended to
+	if (cleanP)
+	{
+		emt = (*strPt)[0]; // this is what renaming the elements in Detector() was for
+		rpls += emt;
+		for (int i{1}; 2 * i < (*strPt).size(); i++)
+		{ // starts off w/2 bc values 0 & 1 are being used to hold the element + class names, then increase i by 2 bc the vector goes like key, value, key, value
+			// try
+			// {
+				string key = (*strPt)[2 * i];
+				string value = (*strPt)[2 * i + 1];
+				if (key == "text-align")
+				{
+					rpls += " align=\"" + value + "\"";
+				}
+				// keep the inner <p> for blockquotes out of it for now i guess, since it's causing problems with the substitution. though i guess you could probably just clean that up in the nester f'n
+				else if (key == "margin-left")
+				{
+					rpls += "><p"; // nest in that extra <p> for when we're working w/bqt
+					rpls2 += "</p>";
+				}
+			// }
+			// catch (exception)
+			// {
+				// break;
+			// }
+		}
+		rpls += ">"; // then add in the closing bracket after the loop is done
+	}
+	else
+	{
+		// rpls = "<p>";
+		rpls += emt + ">"; // just close the p otherwise lol
+	}
+	rpls2 += "</" + emt + ">";									   // make the closing element
+	tmp = regex_replace(tmp, regex("</p>"), rpls2);				   // first remove the ending, in order to keep the blockquotes functioning properly
+	tmp = regex_replace(tmp, regex("<p " + anyClass + ">"), rpls); // then you can replace the opening element
+}
 
-// 		string temp2;
-// 		istringstream line;
-// 		line.str(l);
-// 		// line.str(l);
-// 		// getline()
-// 		while (getline(line, temp2, ';'))
-// 		{
-// 			cout << temp2 << endl;
-// 			cout << "there is a submatch on this line: ";
-// 			if (regex_match(temp2, mitch, regex(rule)))
-// 			{ // yeah let's reuse the submatch why not!!
-// 				cout << "true.\n";
-// 				if ((mitch.size()) == 2)
-// 				{
-// 					string ma = mitch[1].str();
-// 					r.push_back(ma);												// so we push back the rule
-// 					r.push_back(temp2.substr(ma.length() + 2, temp2.length() - 1)); // removes the rule name n the semicolon to push in the value
-// 					cout << "pushing back the last of the matches i guess!\n";
-// 				}
-// 			}
-// 			else
-// 			{
-// 				cout << "false.\n";
-// 			}
-// 		}
+void sClean::spClean(string &tmp)
+{
+	// string anyClass{"class=\"(\\w|\\d|-)+\""}; // might just make this a private var for later use, but for now, just have it appear twice.
+	bool cleanSp{false};
+	vector<string> spInstances = {};
+	vector<vector<string>> spRules = {};
+	string currClass{""};
+	string Orpls{""}, Erpls{""};
+	// so first we determine if the current paragraph has any of the relevant classes
+	for (auto &sp : impSp)
+	{
+		currClass = "class=\"" + sp[1] + "\"";
+		if (regex_search(tmp, regex(currClass)))
+		{
+			cleanSp = true;
+			spInstances.push_back(sp[1]);
+			strPt = &(sp);
+			// spClean(tmp, strPt);
 
-// 		// cssRules r;
-// 		// r.ruler(l, "span", rule);
-// 		// loggy(r);
-// 		// sp.push_back(r.getRules());
-// 		sp.push_back(r);
-// 	}
-// 	else
-// 	{
-// 		cout << "However, it doesn't have any rules worth looking at.\n";
-// 	}
-// }
+			// this loop determines the html replacements
+			for (int i{1}; 2 * i < (*strPt).size(); i++)
+			{ // so the spans remain labelled spans, since they're more likely to have multiple nestings. or at least have that chance to be
+				string key = (*strPt)[2 * i];
+				string value = (*strPt)[2 * i + 1];
+				if (key == "text-decoration")
+				{
+					Orpls += (value == "underline") ? "<ins>" : "<del>";			// if it's not an underline, then it's gonna be a strikethrough
+					Erpls = ((value == "underline") ? "</ins>" : "</del>") + Erpls; // nest it inside
+				}
+				else if (key == "background-color")
+				{
+					Orpls += "<mark>";
+					Erpls = "</mark>" + Erpls;
+				}
+			}
+			spRules.push_back({Orpls, Erpls});
+		}
+	}
+
+	if (cleanSp)
+	{
+		// regex spee("<span " + anyClass + ">((\\w|\\d|\\s)|^</span>)+</span>");
+		// regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "((\\w|\\d|\\s)+|^</span>)</span>");
+		regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "[^<]+</span>");
+		// regex spee("<span " + anyClass + ">((\\w|\\W)|^</span>)+</span>");
+		auto spStart = sregex_iterator(tmp.begin(), tmp.end(), spee); // so we basically have to pick out all the span elements
+		auto spEnd = sregex_iterator();
+		loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in :\n\t" + tmp);
+		// loggy("spRules (full): ");
+		// 			loggy(spRules);
+					// loggy("spRules["+to_string(j)+"]: ");
+					// loggy(spRules[j]);
+
+		int k{0};
+		for (sregex_iterator i = spStart; i != spEnd; i++)
+		{
+			Orpls = ""; Erpls = ""; // reset these w/every loop
+			// currClass = anyClass;	// reset this to anything at the start of each loop
+			// smatch m = *i;
+			string spn = (*i).str();
+			k++;
+			loggy("string match ["+ to_string(k) + "]: " + spn);
+			bool ma{false};
+			int j{0};
+			// find out if it's an instance to be replaced
+			// for (int j{0}; j < spInstances.size(); j++)
+			while (j < spInstances.size() && !ma)
+			{ // do this version since we're working with two vectors of the same size
+				currClass = "class=\"" + spInstances[j] + "\"";
+				if (regex_search(spn, regex(currClass)))
+				{
+					// cout << "this <span> matches one of our rules: " << tmp << endl;
+					Orpls = spRules[j][0];
+					Erpls = spRules[j][1];
+					// break;
+					ma = true;
+				}
+				j++;
+			}
+			string clean = regex_replace(spn, regex("<span " + anyClass + ">"), Orpls); // so first we clean up the submatch. bc we're only working w/one <span> at a time, we can just do anyClass
+			clean = regex_replace(clean, regex("</span>"), Erpls);						 // and then we clean
+			loggy("this should be the cleaned string: " + clean +"\n");
+			tmp = regex_replace(tmp, regex(spn), clean);
+		}
+	}
+	// else
+	// {
+	// if there are no instances, then go ahead n delete all spans indiscriminately
+	tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
+	tmp = regex_replace(tmp, regex("</span>"), "");
+	// }
+}
+
+// i should probably give this like a different name but also nah who needs good coding practices
+void sClean::spClean(string &s, vector<string> *ptr)
+{
+}
 
 void sClean::open(fstream &stream, string path)
 {						   // know that this is static
@@ -281,6 +440,7 @@ void sClean::open(fstream &stream, string path)
 		if (!stream.is_open())
 		{ // this had originally been recursive but for some reason it broke. not like it should've gone through more than two layers i guess
 			// stream.close();
+			// loggy("file at " + path + " does not exist... now making file....");
 			stream.clear();
 			stream.open(path, ios::out);
 			stream.close();
@@ -306,6 +466,7 @@ void sClean::open(fstream &stream, string path, bool append)
 
 void sClean::loggy(string str)
 { // will try to make these friends later but for now. whatever i guess.
+
 	sClean::open(logger, "log.txt", true);
 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
 
@@ -328,7 +489,7 @@ void sClean::loggy(vector<vector<string>> &strs)
 	logger << put_time(localtime(&now), "[%F %T]:\n");
 	for (int i{0}; i < strs.size(); i++)
 	{
-		logger << "Layer " << i << " of the 2D vector:\n";
+		logger << "Layer " << i << " of the 2D vector (" << strs[i].size() << " items):\n";
 		for (auto str : strs[i])
 		{
 			logger << str << " | ";
@@ -336,19 +497,6 @@ void sClean::loggy(vector<vector<string>> &strs)
 		logger << endl;
 	}
 }
-
-// void sClean::loggy(cssRules a) {
-// 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-// 	logger << put_time(localtime(&now), "[%F %T] cssRules obj:\n");
-// 	logger << a;
-// 	}
-
-// string sClean::logTime() {
-// 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-// 	// chrono::system_clock::from_time_t
-// 	// string a = put_time(localtime(&now), "%F %T]");
-// 	return put_time(localtime(&now), "[%F %T]");
-// }
 
 void sClean::reset()
 { // sets all the els back to false and closes all the streams
@@ -358,9 +506,14 @@ void sClean::reset()
 	bodySw = false;
 	tmpEl = false;
 	raw.close();
+	raw.clear();
 	cleaned.close();
-	impP = {{}};
-	impSp = {{}};
+	cleaned.clear();
+	impP = {};
+	impSp = {};
+	// set the pointers to null just in case
+	strPt = nullptr;
+	vpt = nullptr;
 }
 
 void sClean::executor()
@@ -378,6 +531,7 @@ void sClean::executor()
 	resetLineNum(); // reset the current line number
 	// el = "style";
 	findEl("style", "type=\"text/css\""); // sets the private regexps for el start n end, in this case for the styling
+	loggy("findEl now searching for the style.");
 
 	while (getline(raw, temp))
 	{
@@ -386,7 +540,7 @@ void sClean::executor()
 			cout << "\nEnd of file.\nOutput may be found in " << getFullPath(false) << ".\n";
 			// loggy("\nEnd of file.\nOutput may be found in " + getFullPath(false) + ".\n");
 			// foundEl = false; //set this to false for subsequent runs it seems
-			reset();
+			// reset();
 			break;
 		}
 		if (regex_search(temp, elEnd))
@@ -399,15 +553,16 @@ void sClean::executor()
 		{
 			if (!styleSw)
 			{
+				// loggy(el + " " + to_string(numLines) +": " + temp);
 				findStyle(); // if the style switch is off, then do findStyle();
 			}
 			else if (!bodySw)
 			{
 				sanitize(); // otherwise, we're sanitizing the body
+							// if (numLines%25 == 0) { //log every 10 lines bc i'm not trying to be that much of a menace
+							// 	loggy(el + " " + to_string(numLines) +": " + temp);
+							// }
 			}
-
-			// cleaned << temp << endl; //the findStyle() and sanitize() f'ns are pretty much just to transform temp into smth clean
-			// cleaned << temp << (lBreak ? "\n" : "");
 		}
 		if (regex_search(temp, elStart))
 		{
@@ -417,6 +572,11 @@ void sClean::executor()
 		}
 		numLines++;
 	}
+
+	// reset these outside of the while loop in order to keep it from looping twice.
+	setRaw(getTmpPath(false));
+	setClean(getFullPath(false));
+	nester(); // then finally, take the temp file and output it somewhere proper
 
 	reset();
 	// loggy("End of logging for: " + fname + "\n");
