@@ -26,6 +26,7 @@ public:
 		strPt = nullptr;
 		delete vpt;
 		delete strPt;
+		// delete elStart;
 	};
 
 	//void findStyle(std::fstream &, std::string);
@@ -51,6 +52,7 @@ public:
 	void ruler(std::vector<std::string>& ,std::string); // function for pushing the correct css keys n vals back correctly
 	void blockClean(std::string&);
 	void spClean(std::string&);
+	void spClean(std::string&, std::vector<std::string>*);
 
 	void executor(); // executes all the actions based on the filename provided by the string
 

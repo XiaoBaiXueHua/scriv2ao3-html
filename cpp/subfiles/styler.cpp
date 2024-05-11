@@ -5,14 +5,18 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <cctype>
-#include <locale>
+#include <cctype> // these were used in the trim example on stackoverflow
+#include <locale> // these were used in the trim example on stackoverflow
 #include <iterator>
 #include <regex>
 #include <chrono>
 #include "./styler.h"
 
 using namespace std;
+
+// bad practice global var bc im Do Not Believe it needs to be a private member. there's enough of these.
+string anyClass{"class=\"(\\w|\\d|-)+\""};
+
 
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
 inline void ltrim(string &s)
@@ -197,7 +201,7 @@ void sClean::findEl(string name, string attributes)
 // might turn this into its own class later tbh. otherwise, we need to store a var for, like, the default font size (which will probably be hard to determine this way... although maybe look at the spans when going through them and then seeing which one is closer to 1rem? and then storing larger and smaller spans for use of <big> and <small> later), default font name (in order to determine <pre> and <code> elements)
 void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 {
-	regex rule("(text-align|margin-left|text-decoration|white-space|background-color)"); // this covers both p and sp and yeah it's getting hard-coded for now
+	regex rule("(text-align|margin-left|text-decoration|background-color)"); // this covers both p and sp and yeah it's getting hard-coded for now
 	if (regex_search(l, rule))
 	{
 
@@ -236,24 +240,24 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 				{
 					// r.push_back(temp2);
 					ruler(r, temp2);
-					if (r[2] == "text-decoration")
-					{ // later, we'll have to loop these in order to ensure we get all the correct rules in and not just the first one that shows up, but for now, just hard-code it
-						if (r[0] != "p" || !regex_search(r[0], regex("h\\d")))
-						{
-							if (r[3] == "underline")
-							{
-								r[0] = "ins"; // i Think this is the more semantic version of <u>
-							}
-							else if (r[3] == "line-through")
-							{
-								r[0] = "del";
-							}
-						}
-					}
-					else if (r[2] == "background-color")
-					{
-						r[0] = "mark";
-					}
+					// if (r[2] == "text-decoration")
+					// { // later, we'll have to loop these in order to ensure we get all the correct rules in and not just the first one that shows up, but for now, just hard-code it
+					// 	if (r[0] != "p" || !regex_search(r[0], regex("h\\d")))
+					// 	{
+					// 		if (r[3] == "underline")
+					// 		{
+					// 			r[0] = "ins"; // i Think this is the more semantic version of <u>
+					// 		}
+					// 		else if (r[3] == "line-through")
+					// 		{
+					// 			r[0] = "del";
+					// 		}
+					// 	}
+					// }
+					// else if (r[2] == "background-color")
+					// {
+					// 	r[0] = "mark";
+					// }
 				}
 			}
 		}
@@ -279,23 +283,7 @@ void sClean::ruler(vector<string> &v, string str)
 }
 void sClean::blockClean(string &tmp)
 {
-	// regex klass("class=\".+\"");
 	bool cleanP{false};
-	string anyClass{"class=\"(\\w|\\d)+\""};
-	// int i{0};
-	// // auto ruleVec = new vector<string>; //pointer for the correct vector
-	// while (i < impP.size())
-	// {
-	// 	if (regex_search(tmp, regex("class=\"" + impP[i][1] + "\"")))
-	// 	{
-	// 		// cout << "this paragraph is supposed to have a replacement done. behold the raw:\n\t" << temp << endl;
-	// 		cleanP = true;
-	// 		strPt = &(impP[i]);
-	// 		// ruleVec = &impP[i];
-	// 		break;
-	// 	}
-	// 	i++; // you fool. do not forget to iterate
-	// }
 	for (auto &p : impP)
 	{
 		if (regex_search(tmp, regex("class=\"" + p[1] + "\"")))
@@ -313,7 +301,7 @@ void sClean::blockClean(string &tmp)
 	{
 		emt = (*strPt)[0]; // this is what renaming the elements in Detector() was for
 		rpls += emt;
-		for (int i{1}; 2*i < (*strPt).size(); i++)
+		for (int i{1}; 2 * i < (*strPt).size(); i++)
 		{ // starts off w/2 bc values 0 & 1 are being used to hold the element + class names, then increase i by 2 bc the vector goes like key, value, key, value
 			try
 			{
@@ -335,22 +323,7 @@ void sClean::blockClean(string &tmp)
 				break;
 			}
 		}
-		rpls += ">"; //then add in the closing bracket after the loop is done
-		// string key = (*strPt)[2];
-		// string value = (*strPt)[3];
-		// // cout << "relevant strPt vals: " << setw(10) << key << ": " << setw(10) << value << endl;
-		// if (key == "text-align")
-		// {
-		// 	// replace the class w/ align=value
-		// 	rpls = "<" + emt + " align=\"" + value + "\">";
-		// }
-		// else if (key == "margin-left")
-		// {
-		// 	// replace the entire p w/a bqt
-		// 	// emt = "blockquote"; // yay hard-coding :D
-		// 	rpls = "<" + emt + "><p>"; // have a paragraph inside the blockquote for the time being?
-		// 	tmp = regex_replace(tmp, regex("</p>"), "</p></blockquote>"); // hard-code this for now
-		// }
+		rpls += ">"; // then add in the closing bracket after the loop is done
 	}
 	else
 	{
@@ -364,25 +337,50 @@ void sClean::blockClean(string &tmp)
 void sClean::spClean(string &tmp)
 {
 	bool cleanSp{false};
-	string anyClass{"class=\"(\\w|\\d)+\""}; // might just make this a private var for later use, but for now, just have it appear twice.
+	// string anyClass{"class=\"(\\w|\\d|-)+\""}; // might just make this a private var for later use, but for now, just have it appear twice.
 	for (auto &sp : impSp)
 	{
 		if (regex_search(tmp, regex("class=\"" + sp[1] + "\"")))
 		{
 			cleanSp = true;
 			strPt = &(sp);
-			break;
+			spClean(tmp, strPt);
+			// break;
 		}
 	}
 
 	// this is where it starts to diverge from the block clean
 	// like obviously we've already checked to see if there are Any important spans in here, bc if not, then like. just get rid of all the spans yippee
-	if (!cleanSp)
+	if (!cleanSp) // let's keep this for now
 	{
-		tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
-		tmp = regex_replace(tmp, regex("</span>"), "");
+	// then at the end, clean up all the remaining spans
+	tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
+	tmp = regex_replace(tmp, regex("</span>"), "");
 	}
 }
+
+// i should probably give this like a different name but also nah who needs good coding practices
+void sClean::spClean(string &s, vector<string> *ptr)
+{
+	string emt{""}, Orpls{""}, Erpls{""};
+	for (int i{1}; 2 * i < (*ptr).size(); i++)
+	{ // so the spans remain labelled spans, since they're more likely to have multiple nestings. or at least have that chance to be
+		string key = (*ptr)[2 * i];
+		string value = (*ptr)[2 * i + 1];
+		if (key == "text-decoration")
+		{
+			Orpls += (value == "underline") ? "<ins>" : "<del>";			// if it's not an underline, then it's gonna be a strikethrough
+			Erpls = ((value == "underline") ? "</ins>" : "</del>") + Erpls; // nest it inside
+		}
+		else if (key == "background-color")
+		{
+			Orpls += "<mark>";
+			Erpls = "</mark>" + Erpls;
+		}
+	}
+	// and then you have to actually, like. iterate through the thing... although it's possible that there are multiple relevant spans in a single paragraph, so. hmmmmmm....
+}
+
 void sClean::open(fstream &stream, string path)
 {						   // know that this is static
 	if (!stream.is_open()) // if for some reason it failed to open, or i just forgot
