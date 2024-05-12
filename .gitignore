@@ -39,6 +39,8 @@
 # artifacts of creation
 **/output/*.html
 **/output/*.css
+**/tmp/*
+**/log.txt
 
 # Stuff I just want to keep private
 **/private
