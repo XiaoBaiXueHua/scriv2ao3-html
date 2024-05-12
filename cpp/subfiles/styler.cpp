@@ -157,6 +157,7 @@ void sClean::inputName()
 	cin >> filename;
 	setName(filename);
 }
+void sClean::setBatch(bool b) { bulk = b; }
 
 void sClean::setiPath(string str) { fipath = str + "/"; } // will also automatically add in the /
 void sClean::setoPath(string str) { fopath = str + "/"; }

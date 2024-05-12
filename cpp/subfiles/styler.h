@@ -37,6 +37,7 @@ public:
 	void findEl(std::string, std::string); //overloading for when you want to find an element w/a particular param, like how <style> has "type=text/css" in it.
 	void redirStream(std::fstream &, std::string, bool);
 	void inputName();
+	void setBatch(bool);
 	void setiPath(std::string), setoPath(std::string), setName(std::string), setType(std::string); //set the current path, name, n type of file being worked with
 	void setRaw(std::string), setClean(std::string);
 	std::string getFullPath(bool), getTmpPath();
