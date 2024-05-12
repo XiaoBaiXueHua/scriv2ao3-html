@@ -17,23 +17,15 @@ public:
 	sClean(); //default constructor
 	sClean(std::string);
 	~sClean() { //destructor to clear n close the streams? really not sure if this is necessary
-		//raw -> nullptr;
-		// raw.clear();
 		raw.close();
-		// cleaned.clear();
 		cleaned.close();
 		vpt = nullptr;
 		strPt = nullptr;
 		delete vpt;
 		delete strPt;
-		// delete elStart;
 	};
 
-	//void findStyle(std::fstream &, std::string);
-	//void findStyle(std::string);
 	void findStyle();
-	//void findStyle(std::string); //uhhh... version where you just input the name of the file?
-	// void neet(std::string &, std::string); 
 
 	void sanitize();
 
@@ -76,13 +68,14 @@ private:
 	bool foundEl{false}, styleSw{false}, bodySw{false}, tmpEl{false}, bulk{false}; //generic switch that flips around depending on whether we've found our currently searched-for el, and then perm switches for style n body
 	std::string fname{""}, tmpname{""}, fipath{""}, fopath{""}, ftype{""}, fullPath{""}; //filepath n filename
 	std::string temp{""}, el{""}; //i suspect i will probably want somewhere to temporarily hold strings when tossing them around
-	std::string quot{char(34)}, lt{char(60)}, gt{char(62)}, amp{char(38)}; //need this for, like. man idk why the regex doesn't take it as it is.
+	// std::string quot{char(34)}, lt{char(60)}, gt{char(62)}, amp{char(38)}; //need this for, like. man idk why the regex doesn't take it as it is.
 	std::fstream raw, cleaned; //the two streams for the input/output
 	std::fstream logger; // stream for logger
 	std::regex elStart, elEnd; //regexes for the starting and ending elements that get used n redeclared during loops
 	std::vector<std::vector<std::string>>impSp, impP; //vectors for the important p's n sp's
 	std::vector<std::string>*strPt; // pointer to work w/the rules vectors
 	std::vector<std::vector<std::string>>*vpt;
+	std::vector<int>asciis {34, 38, 39, 60, 62}; //vector of asciis that need to be replaced manually bc thanks scrivener. currently covers straight quotes, ampersands, and gt/lt
 };
 
 #endif //end of SCRIV_CSS

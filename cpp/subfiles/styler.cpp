@@ -61,7 +61,7 @@ void sClean::findStyle()
 		foundEl = false; // this gets declared inside the findStyle and sanitize() functions
 		findEl("body");	 // okay so have to do it this way in order to make the css work correctly
 		loggy("findEl now searching for the body.");
-		setType("html");			 // changes the next file type to html
+		setType("html");		// changes the next file type to html
 		setClean(getTmpPath()); // switches the stream to the new tmp file
 		loggy("the vector of important p's: ");
 		loggy(impP);
@@ -105,11 +105,7 @@ void sClean::sanitize()
 		blockClean(temp); // first clean the block
 		spClean(temp);	  // then clean the in-lines
 		// so each paragraph is in temp, so
-		temp = regex_replace(temp, regex("\\s?"+anyClass), ""); // clear out all remaining class 
-		// templace("\\&#34;", to_string(toascii(char(34))));
-		temp = regex_replace(temp, regex("&#34;"), quot);
-		temp = regex_replace(temp, regex("&#60;"), lt);
-		temp = regex_replace(temp, regex("&#62;"), gt);
+		temp = regex_replace(temp, regex("\\s?" + anyClass), ""); // clear out all remaining class
 		unnest("em");
 		unnest("strong");
 		cleaned << temp;
@@ -118,34 +114,39 @@ void sClean::sanitize()
 
 void sClean::nester()
 {
-	while (getline(raw, temp)) {
+	while (getline(raw, temp))
+	{
 		unnest("blockquote", true);
 		// cout << "Now unnesting the string:\n";
 		// cout << temp << endl;
 		cleaned << temp;
 	}
-	
+
 	// there has got to be a way to do this efficiently even w/large files... since we're working w/streams here, then maybe do peek during the sanitize step of the blockClean()
-	
 }
 
-void sClean::unnest(string elm) {
-	templace("</"+elm+"><"+elm+">");
+void sClean::unnest(string elm)
+{
+	templace("</" + elm + "><" + elm + ">");
 }
-void sClean::unnest(string elm, bool nl) {
+void sClean::unnest(string elm, bool nl)
+{
 	// string clean{"</"+elm+"><"+elm+">"};
-	templace("</"+elm+"><"+elm+">", (nl ? "\n" : ""));
+	templace("</" + elm + "><" + elm + ">", (nl ? "\n" : ""));
 }
 
 // surely doing things like this will not go wrong at all
-void sClean::templace(string &str, string exp, string rep) {
+void sClean::templace(string &str, string exp, string rep)
+{
 	// regex r(R"("+exp)");
 	str = regex_replace(str, regex(exp), rep);
 }
-void sClean::templace(string exp, string rep) {
+void sClean::templace(string exp, string rep)
+{
 	templace(temp, exp, rep);
 }
-void sClean::templace(string exp) {
+void sClean::templace(string exp)
+{
 	templace(exp, "");
 }
 
@@ -171,11 +172,14 @@ void sClean::redirStream(fstream &stm, string path, bool clear = false)
 {
 	if (stm.is_open()) // if there's a file already open
 	{
-		if (clear) { stm.clear(); }; // clear it if you're supposed to
+		if (clear)
+		{
+			stm.clear();
+		};			 // clear it if you're supposed to
 		stm.close(); // then just close it
 	}
 	sClean::open(stm, path, false); // and then do the standard opening procedure
-							 // loggy("the path has been directed to "+path);
+									// loggy("the path has been directed to "+path);
 }
 void sClean::setRaw(string path)
 {
@@ -306,18 +310,18 @@ void sClean::blockClean(string &tmp)
 		rpls += emt;
 		for (int i{1}; 2 * i < (*strPt).size(); i++)
 		{ // starts off w/2 bc values 0 & 1 are being used to hold the element + class names, then increase i by 2 bc the vector goes like key, value, key, value
-				string key = (*strPt)[2 * i];
-				string value = (*strPt)[2 * i + 1];
-				if (key == "text-align")
-				{
-					rpls += " align=\"" + value + "\"";
-				}
-				// keep the inner <p> for blockquotes out of it for now i guess, since it's causing problems with the substitution. though i guess you could probably just clean that up in the nester f'n
-				else if (key == "margin-left")
-				{
-					rpls += "><p"; // nest in that extra <p> for when we're working w/bqt
-					rpls2 += "</p>";
-				}
+			string key = (*strPt)[2 * i];
+			string value = (*strPt)[2 * i + 1];
+			if (key == "text-align")
+			{
+				rpls += " align=\"" + value + "\"";
+			}
+			// keep the inner <p> for blockquotes out of it for now i guess, since it's causing problems with the substitution. though i guess you could probably just clean that up in the nester f'n
+			else if (key == "margin-left")
+			{
+				rpls += "><p"; // nest in that extra <p> for when we're working w/bqt
+				rpls2 += "</p>";
+			}
 		}
 		rpls += ">"; // then add in the closing bracket after the loop is done
 	}
@@ -368,27 +372,31 @@ void sClean::spClean(string &tmp)
 			spRules.push_back({Orpls, Erpls});
 		}
 	}
-
+	if (spRules.size() > 0)
+	{
+		loggy("spInstances:");
+		loggy(spInstances);
+		loggy("spRules:");
+		loggy(spRules);
+	}
 	if (cleanSp)
 	{
-		// regex spee("<span " + anyClass + ">((\\w|\\d|\\s)|^</span>)+</span>");
-		// regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "((\\w|\\d|\\s)+|^</span>)</span>");
-		regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "[^<]+</span>");
-		// regex spee("<span " + anyClass + ">" + ".+" + "</span>", regex::nosubs | regex::optimize);
-		// regex spee("<span " + anyClass + ">((\\w|\\W)|^</span>)+</span>");
+
+		regex spee("<span " + anyClass + ">" + "[^<]+</span>");		  // this will fail if there is another element inside it, but since scrivener keeps its <span> as the innermost els, that's fine
 		auto spStart = sregex_iterator(tmp.begin(), tmp.end(), spee); // so we basically have to pick out all the span elements
 		auto spEnd = sregex_iterator();
-		loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in :\n\t" + tmp);
+		loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in:\n\t" + tmp);
 
 		int k{0};
 		for (sregex_iterator i = spStart; i != spEnd; i++)
 		{
-			Orpls = ""; Erpls = ""; // reset these w/every loop
+			Orpls = "";
+			Erpls = ""; // reset these w/every loop
 			// currClass = anyClass;	// reset this to anything at the start of each loop
 			// smatch m = *i;
 			string spn = (*i).str();
 			k++;
-			loggy("string match ["+ to_string(k) + "]: " + spn);
+			loggy("string match [" + to_string(k) + "] on line " + to_string(numLines) + ": " + spn);
 			bool ma{false};
 			int j{0};
 			// find out if it's an instance to be replaced
@@ -404,18 +412,37 @@ void sClean::spClean(string &tmp)
 				}
 				j++;
 			}
-			string clean = regex_replace(spn, regex("<span " + anyClass + ">"), Orpls); // so first we clean up the submatch. bc we're only working w/one <span> at a time, we can just do anyClass
-			clean = regex_replace(clean, regex("</span>"), Erpls);						 // and then we clean
-			loggy("this should be the cleaned string: " + clean +"\n");
-			tmp = regex_replace(tmp, regex(spn), clean);
+			if (ma)
+			{
+				string clean = regex_replace(spn, regex("<span " + anyClass + ">"), Orpls); // so first we clean up the submatch. bc we're only working w/one <span> at a time, we can just do anyClass
+				clean = regex_replace(clean, regex("</span>"), Erpls);						// and then we clean
+				loggy("this should be the cleaned string: " + clean);
+				// auto aaa = new regex;
+				try
+				{
+					tmp = regex_replace(tmp, regex(spn), clean); // all right. so. it seems that we need
+				}
+				catch (exception)
+				{
+					cout << "there's some parenthetical nonsense happening on line " << to_string(numLines) << " preventing us from inserting our " << Orpls << " and " << Erpls << "." << endl;
+				}
+				loggy("the cleaned string: \n\t" + tmp);
+				ma = false;
+			}
 		}
 	}
 	// delete all other <span> instances indiscriminately
 	tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
 	tmp = regex_replace(tmp, regex("</span>"), "");
+	for (auto i : asciis)
+	{
+		//
+		string s{char(i)};
+		templace(tmp, "&#" + to_string(i) + ";", s);
+	}
 }
 
-void sClean::open(fstream &stream, string path, bool append=false)
+void sClean::open(fstream &stream, string path, bool append = false)
 {
 	if (!stream.is_open())
 	{
@@ -435,7 +462,10 @@ void sClean::loggy(string str)
 
 	sClean::open(logger, "log.txt", true);
 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	if (str.length() > 25) { str = "\n" + str; };
+	if (str.length() > 25)
+	{
+		str = "\n" + str;
+	};
 	logger << put_time(localtime(&now), "[%F %T]: ") << str << endl;
 }
 void sClean::loggy(vector<string> &strs)
@@ -474,8 +504,10 @@ void sClean::reset()
 	tmpEl = false;
 	raw.close();
 	raw.clear();
+	raw.flush();
 	cleaned.close();
 	cleaned.clear();
+	cleaned.flush();
 	impP = {};
 	impSp = {};
 	// set the pointers to null just in case
@@ -484,8 +516,11 @@ void sClean::reset()
 }
 
 void sClean::executor()
-{				 // so how this should probably work to keep everything inside one while loop is that the major functions like findStyle() and stuff, when they're done running, they should basically switch the findEl w/in them, rather than have it happen here in the executor
-	if (!bulk) { inputName(); } // set the name, if it's not a bulk
+{ // so how this should probably work to keep everything inside one while loop is that the major functions like findStyle() and stuff, when they're done running, they should basically switch the findEl w/in them, rather than have it happen here in the executor
+	if (!bulk)
+	{
+		inputName();
+	} // set the name, if it's not a bulk
 	// loggy("\nNow logging for: " + fname + "\n");
 	setType("html");
 	// sClean::open(rawStream, getFullPath());
