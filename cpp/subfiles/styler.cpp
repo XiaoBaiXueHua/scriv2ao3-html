@@ -62,7 +62,7 @@ void sClean::findStyle()
 		findEl("body");	 // okay so have to do it this way in order to make the css work correctly
 		loggy("findEl now searching for the body.");
 		setType("html");			 // changes the next file type to html
-		setClean(getTmpPath(false)); // switches the stream to the new tmp file
+		setClean(getTmpPath()); // switches the stream to the new tmp file
 		loggy("the vector of important p's: ");
 		loggy(impP);
 		loggy("the vector of important spans: ");
@@ -105,24 +105,48 @@ void sClean::sanitize()
 		blockClean(temp); // first clean the block
 		spClean(temp);	  // then clean the in-lines
 		// so each paragraph is in temp, so
+		temp = regex_replace(temp, regex("\\s?"+anyClass), ""); // clear out all remaining class 
+		// templace("\\&#34;", to_string(toascii(char(34))));
+		temp = regex_replace(temp, regex("&#34;"), quot);
+		temp = regex_replace(temp, regex("&#60;"), lt);
+		temp = regex_replace(temp, regex("&#62;"), gt);
+		unnest("em");
+		unnest("strong");
 		cleaned << temp;
 	}
-	// if (regex_search(temp, elStart))
-	// {
-	// 	foundEl = true;
-	// }
-
-	// }
-	// okay so. what this does is that it continues to iterate through the html file.
-	// it ignores things until it hits the <body> element, after which it starts checking the element class names against its vector of allowed class names
-	// for the p's, if it doesn't match any allowed classes, then just remove the class name. for the spans, remove the entire el if it doesn't fit. if it does, then for both, replace just the el + class w/the correct semantic name, and then replace the nearest closing sp/p with the correct closing el as well
-	// when outputting the html this first time, don't have the endl, and keep it in a temp file, which will get deleted at the end.
-	// the temp file is then read to further sanitize by checking for misnesting and the like all at once
 }
 
 void sClean::nester()
 {
+	while (getline(raw, temp)) {
+		unnest("blockquote", true);
+		// cout << "Now unnesting the string:\n";
+		// cout << temp << endl;
+		cleaned << temp;
+	}
+	
 	// there has got to be a way to do this efficiently even w/large files... since we're working w/streams here, then maybe do peek during the sanitize step of the blockClean()
+	
+}
+
+void sClean::unnest(string elm) {
+	templace("</"+elm+"><"+elm+">");
+}
+void sClean::unnest(string elm, bool nl) {
+	// string clean{"</"+elm+"><"+elm+">"};
+	templace("</"+elm+"><"+elm+">", (nl ? "\n" : ""));
+}
+
+// surely doing things like this will not go wrong at all
+void sClean::templace(string &str, string exp, string rep) {
+	// regex r(R"("+exp)");
+	str = regex_replace(str, regex(exp), rep);
+}
+void sClean::templace(string exp, string rep) {
+	templace(temp, exp, rep);
+}
+void sClean::templace(string exp) {
+	templace(exp, "");
 }
 
 void sClean::inputName()
@@ -143,14 +167,14 @@ void sClean::setName(string str)
 void sClean::setType(string str) { ftype = "." + str; } // so in this case, Do Not include the period
 
 // functions for redirecting the stream to other files
-void sClean::redirStream(fstream &stm, string path)
+void sClean::redirStream(fstream &stm, string path, bool clear = false)
 {
 	if (stm.is_open()) // if there's a file already open
 	{
-		// stm.clear();
+		if (clear) { stm.clear(); }; // clear it if you're supposed to
 		stm.close(); // then just close it
 	}
-	sClean::open(stm, path); // and then do the standard opening procedure
+	sClean::open(stm, path, false); // and then do the standard opening procedure
 							 // loggy("the path has been directed to "+path);
 }
 void sClean::setRaw(string path)
@@ -161,7 +185,7 @@ void sClean::setRaw(string path)
 void sClean::setClean(string path)
 {
 	loggy("the output path has been set to: " + path);
-	redirStream(cleaned, path);
+	redirStream(cleaned, path, true);
 }
 
 string sClean::getFullPath(bool instream) // true means it's the input path
@@ -172,10 +196,10 @@ string sClean::getFullPath(bool instream) // true means it's the input path
 	return fullPath;
 }
 
-string sClean::getTmpPath(bool instream)
+string sClean::getTmpPath()
 {
-	string fpath = instream ? fipath : fopath;
-	fullPath = fpath + tmpname + ftype;
+	// string fpath = instream ? fipath : fopath;
+	fullPath = "tmp/" + tmpname + ftype;
 	// loggy("tmp path: "+fullPath);
 	return fullPath;
 }
@@ -227,7 +251,6 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 				{
 					if (regex_search(temp2, regex("\\d.\\d+")))
 					{ // have to make sure this is, like. a proper blockquote el
-						// r.push_back(temp2); // since we should've cut off the curly brackets, go ahead and push the whole thing back
 						ruler(r, temp2);
 						if (!regex_match(r[0], regex("h\\d")))
 						{
@@ -237,26 +260,7 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 				}
 				else
 				{
-					// r.push_back(temp2);
 					ruler(r, temp2);
-					// if (r[2] == "text-decoration")
-					// { // later, we'll have to loop these in order to ensure we get all the correct rules in and not just the first one that shows up, but for now, just hard-code it
-					// 	if (r[0] != "p" || !regex_search(r[0], regex("h\\d")))
-					// 	{
-					// 		if (r[3] == "underline")
-					// 		{
-					// 			r[0] = "ins"; // i Think this is the more semantic version of <u>
-					// 		}
-					// 		else if (r[3] == "line-through")
-					// 		{
-					// 			r[0] = "del";
-					// 		}
-					// 	}
-					// }
-					// else if (r[2] == "background-color")
-					// {
-					// 	r[0] = "mark";
-					// }
 				}
 			}
 		}
@@ -302,8 +306,6 @@ void sClean::blockClean(string &tmp)
 		rpls += emt;
 		for (int i{1}; 2 * i < (*strPt).size(); i++)
 		{ // starts off w/2 bc values 0 & 1 are being used to hold the element + class names, then increase i by 2 bc the vector goes like key, value, key, value
-			// try
-			// {
 				string key = (*strPt)[2 * i];
 				string value = (*strPt)[2 * i + 1];
 				if (key == "text-align")
@@ -316,11 +318,6 @@ void sClean::blockClean(string &tmp)
 					rpls += "><p"; // nest in that extra <p> for when we're working w/bqt
 					rpls2 += "</p>";
 				}
-			// }
-			// catch (exception)
-			// {
-				// break;
-			// }
 		}
 		rpls += ">"; // then add in the closing bracket after the loop is done
 	}
@@ -336,7 +333,6 @@ void sClean::blockClean(string &tmp)
 
 void sClean::spClean(string &tmp)
 {
-	// string anyClass{"class=\"(\\w|\\d|-)+\""}; // might just make this a private var for later use, but for now, just have it appear twice.
 	bool cleanSp{false};
 	vector<string> spInstances = {};
 	vector<vector<string>> spRules = {};
@@ -378,14 +374,11 @@ void sClean::spClean(string &tmp)
 		// regex spee("<span " + anyClass + ">((\\w|\\d|\\s)|^</span>)+</span>");
 		// regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "((\\w|\\d|\\s)+|^</span>)</span>");
 		regex spee("<span " + anyClass + ">" /* this cover all the <span class="sx"> instances */ + "[^<]+</span>");
+		// regex spee("<span " + anyClass + ">" + ".+" + "</span>", regex::nosubs | regex::optimize);
 		// regex spee("<span " + anyClass + ">((\\w|\\W)|^</span>)+</span>");
 		auto spStart = sregex_iterator(tmp.begin(), tmp.end(), spee); // so we basically have to pick out all the span elements
 		auto spEnd = sregex_iterator();
 		loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in :\n\t" + tmp);
-		// loggy("spRules (full): ");
-		// 			loggy(spRules);
-					// loggy("spRules["+to_string(j)+"]: ");
-					// loggy(spRules[j]);
 
 		int k{0};
 		for (sregex_iterator i = spStart; i != spEnd; i++)
@@ -405,10 +398,8 @@ void sClean::spClean(string &tmp)
 				currClass = "class=\"" + spInstances[j] + "\"";
 				if (regex_search(spn, regex(currClass)))
 				{
-					// cout << "this <span> matches one of our rules: " << tmp << endl;
 					Orpls = spRules[j][0];
 					Erpls = spRules[j][1];
-					// break;
 					ma = true;
 				}
 				j++;
@@ -419,47 +410,22 @@ void sClean::spClean(string &tmp)
 			tmp = regex_replace(tmp, regex(spn), clean);
 		}
 	}
-	// else
-	// {
-	// if there are no instances, then go ahead n delete all spans indiscriminately
+	// delete all other <span> instances indiscriminately
 	tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
 	tmp = regex_replace(tmp, regex("</span>"), "");
-	// }
 }
 
-// i should probably give this like a different name but also nah who needs good coding practices
-void sClean::spClean(string &s, vector<string> *ptr)
-{
-}
-
-void sClean::open(fstream &stream, string path)
-{						   // know that this is static
-	if (!stream.is_open()) // if for some reason it failed to open, or i just forgot
-	{
-		stream.open(path);
-		if (!stream.is_open())
-		{ // this had originally been recursive but for some reason it broke. not like it should've gone through more than two layers i guess
-			// stream.close();
-			// loggy("file at " + path + " does not exist... now making file....");
-			stream.clear();
-			stream.open(path, ios::out);
-			stream.close();
-			stream.open(path);
-		}
-	}
-}
-
-void sClean::open(fstream &stream, string path, bool append)
+void sClean::open(fstream &stream, string path, bool append=false)
 {
 	if (!stream.is_open())
 	{
-		stream.open(path, ios_base::app);
+		append ? stream.open(path, ios_base::app) : stream.open(path);
 		if (!stream.is_open())
 		{
 			stream.clear();
 			stream.open(path, ios::out);
 			stream.close();
-			stream.open(path, ios_base::app);
+			append ? stream.open(path, ios_base::app) : stream.open(path);
 		}
 	}
 }
@@ -469,8 +435,8 @@ void sClean::loggy(string str)
 
 	sClean::open(logger, "log.txt", true);
 	time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-
-	logger << put_time(localtime(&now), "[%F %T]: ") << str << std::endl;
+	if (str.length() > 25) { str = "\n" + str; };
+	logger << put_time(localtime(&now), "[%F %T]: ") << str << endl;
 }
 void sClean::loggy(vector<string> &strs)
 { // will try to make these friends later but for now. whatever i guess.
@@ -479,7 +445,8 @@ void sClean::loggy(vector<string> &strs)
 	logger << put_time(localtime(&now), "[%F %T]:\n");
 	for (auto str : strs)
 	{
-		logger << str << std::endl;
+		// logger << str << endl;
+		loggy(str);
 	}
 }
 
@@ -518,7 +485,7 @@ void sClean::reset()
 
 void sClean::executor()
 {				 // so how this should probably work to keep everything inside one while loop is that the major functions like findStyle() and stuff, when they're done running, they should basically switch the findEl w/in them, rather than have it happen here in the executor
-	inputName(); // input the name
+	if (!bulk) { inputName(); } // set the name, if it's not a bulk
 	// loggy("\nNow logging for: " + fname + "\n");
 	setType("html");
 	// sClean::open(rawStream, getFullPath());
@@ -574,7 +541,7 @@ void sClean::executor()
 	}
 
 	// reset these outside of the while loop in order to keep it from looping twice.
-	setRaw(getTmpPath(false));
+	setRaw(getTmpPath());
 	setClean(getFullPath(false));
 	nester(); // then finally, take the temp file and output it somewhere proper
 
