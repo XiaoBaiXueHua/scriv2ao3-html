@@ -31,7 +31,7 @@ public:
 
 	void nester();
 	void unnest(std::string);
-	void unnest(std::string, bool);
+	// void unnest(std::string, bool);
 
 	void findEl(std::string);
 	void findEl(std::string, std::string); //overloading for when you want to find an element w/a particular param, like how <style> has "type=text/css" in it.
@@ -40,6 +40,7 @@ public:
 	void setBatch(bool);
 	void setiPath(std::string), setoPath(std::string), setName(std::string), setType(std::string); //set the current path, name, n type of file being worked with
 	void setRaw(std::string), setClean(std::string);
+	// std::fstream getRaw(), getClean();
 	std::string getFullPath(bool), getTmpPath();
 	void resetLineNum();
 
@@ -48,6 +49,8 @@ public:
 	void ruler(std::vector<std::string>& ,std::string); // function for pushing the correct css keys n vals back correctly
 	void blockClean(std::string&);
 	void spClean(std::string&);
+
+	void unminify(); // unminifies an html file
 
 	void templace(std::string);
 	void templace(std::string, std::string);
@@ -65,7 +68,7 @@ public:
 
 	void reset();
 private:
-	int numLines{1}; //this really probably does not need to be private... maybe static though!
+	int numLines{1}, bodLine{1}; //this really probably does not need to be private... maybe static though!
 	bool foundEl{false}, styleSw{false}, bodySw{false}, tmpEl{false}, bulk{false}; //generic switch that flips around depending on whether we've found our currently searched-for el, and then perm switches for style n body
 	std::string fname{""}, tmpname{""}, fipath{""}, fopath{""}, ftype{""}, fullPath{""}; //filepath n filename
 	std::string temp{""}, el{""}; //i suspect i will probably want somewhere to temporarily hold strings when tossing them around

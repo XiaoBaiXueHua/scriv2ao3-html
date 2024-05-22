@@ -15,7 +15,7 @@
 using namespace std;
 
 // bad practice global var bc im Do Not Believe it needs to be a private member. there's enough of these.
-string anyClass{"class=\"(\\w|\\d|-)+\""};
+string anyClass{"class=\"(\\w|\\d|-)+\""}, anyEl{"(\\s?(\\w|\\d|=|\")+)*"};
 
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
 inline void ltrim(string &s)
@@ -52,6 +52,13 @@ sClean::sClean(string path)
 	setiPath(path);
 	setoPath("output");
 }
+
+void sClean::unminify() { // well. could probably just use nester() for this
+	vector<string> blockEls{"p", "ol", "ul", "blockquote", "style", "div", "details", "table", "tr"}; // for now doesn't include <li>
+	for (string e : blockEls) {
+		templace("</"+e+">", "</"+e+">\n"); // replace them all w/newlines
+	}
+} 
 
 void sClean::findStyle()
 { // takes the raw stream bc it will open the cleaned stream w/in the function. also the raw stream should be an html file
@@ -102,6 +109,7 @@ void sClean::sanitize()
 	}
 	if (foundEl)
 	{
+		bodLine++;
 		blockClean(temp); // first clean the block
 		spClean(temp);	  // then clean the in-lines
 		// so each paragraph is in temp, so
@@ -114,32 +122,49 @@ void sClean::sanitize()
 
 void sClean::nester()
 {
-	while (getline(raw, temp))
-	{
-		unnest("blockquote", true);
+	// remove this one from the loop as well so that it can be used in unminify as well
+	// while (getline(raw, temp))
+	// {
+		// loggy(temp);
+		// templace("<p>", "<p>\n"); // new line for each paragraph
+		// templace("</p>", "\n</p>");
+		// templace("</p>", "</p>\n");
+		templace("<p>\\s+</p>", "<p>&nbsp;</p>"); 
+		unnest("blockquote");
+		// unnest("pre"); // for when i eventually figure out how to get it to do <code> and <pre>
+		// templace("</li>", "</li>\n");
+		// unnest("li", true);
+		unnest("ol");
+		unnest("ul");
+
+		// first unnest all your things, then unminify the rest
+		unminify();
 		// cout << "Now unnesting the string:\n";
 		// cout << temp << endl;
 		cleaned << temp;
-	}
+	// }
 
 	// there has got to be a way to do this efficiently even w/large files... since we're working w/streams here, then maybe do peek during the sanitize step of the blockClean()
 }
 
 void sClean::unnest(string elm)
 {
-	templace("</" + elm + "><" + elm + ">");
+	templace("</" + elm + "><" + elm + ">"); // maybe add "(\\s?(\\w|\\d|-))*" to the regex to check for classes n whatnot -- actually "(\s?(\w|\d|=|\"|-)+)*" should probs be the regex
 }
-void sClean::unnest(string elm, bool nl)
-{
-	// string clean{"</"+elm+"><"+elm+">"};
-	templace("</" + elm + "><" + elm + ">", (nl ? "\n" : ""));
-}
+// void sClean::unnest(string elm, bool nl)
+// {
+// 	// string clean{"</"+elm+"><"+elm+">"};
+// 	templace("</" + elm + "><" + elm + ">", (nl ? "\n" : ""));
+// }
 
 // surely doing things like this will not go wrong at all
 void sClean::templace(string &str, string exp, string rep)
 {
 	// regex r(R"("+exp)");
-	str = regex_replace(str, regex(exp), rep);
+	if (regex_search(str, regex(exp))) { // only proceed if the thing actually exists
+		str = regex_replace(str, regex(exp), rep);
+	}
+	
 }
 void sClean::templace(string exp, string rep)
 {
@@ -187,6 +212,7 @@ void sClean::setRaw(string path)
 	loggy("the raw stream path has been set to: " + path);
 	redirStream(raw, path);
 }
+
 void sClean::setClean(string path)
 {
 	loggy("the output path has been set to: " + path);
@@ -229,7 +255,7 @@ void sClean::findEl(string name, string attributes)
 // might turn this into its own class later tbh. otherwise, we need to store a var for, like, the default font size (which will probably be hard to determine this way... although maybe look at the spans when going through them and then seeing which one is closer to 1rem? and then storing larger and smaller spans for use of <big> and <small> later), default font name (in order to determine <pre> and <code> elements)
 void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 {
-	regex rule("(text-align|margin-left|text-decoration|background-color)"); // this covers both p and sp and yeah it's getting hard-coded for now
+	regex rule("(text-align|margin-left|text-decoration)"); // this covers both p and sp and yeah it's getting hard-coded for now. no more checking for background-color since we can't use <mark>
 	if (regex_search(l, rule))
 	{
 
@@ -364,11 +390,11 @@ void sClean::spClean(string &tmp)
 					Orpls += (value == "underline") ? "<ins>" : "<del>";			// if it's not an underline, then it's gonna be a strikethrough
 					Erpls = ((value == "underline") ? "</ins>" : "</del>") + Erpls; // nest it inside
 				}
-				else if (key == "background-color")
-				{
-					Orpls += "<mark>";
-					Erpls = "</mark>" + Erpls;
-				}
+				// else if (key == "background-color") // we are not allowed to have <mark> tags on ao3 actually
+				// {
+				// 	Orpls += "<mark>";
+				// 	Erpls = "</mark>" + Erpls;
+				// }
 			}
 			spRules.push_back({Orpls, Erpls});
 		}
@@ -388,7 +414,7 @@ void sClean::spClean(string &tmp)
 		auto spEnd = sregex_iterator();
 		loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in:\n\t" + tmp);
 
-		int k{0};
+		int k{0}; // this is for logging purposes
 		for (sregex_iterator i = spStart; i != spEnd; i++)
 		{
 			Orpls = "";
@@ -417,6 +443,14 @@ void sClean::spClean(string &tmp)
 			{
 				string clean = regex_replace(spn, regex("<span " + anyClass + ">"), Orpls); // so first we clean up the submatch. bc we're only working w/one <span> at a time, we can just do anyClass
 				clean = regex_replace(clean, regex("</span>"), Erpls);						// and then we clean
+				// these are supposed to clean up the various things not converted to html by scrivener, but it seems that shan't be happening for now
+				// templace("’", "&rsquo;");
+				// templace("‘", "&lsquo;");
+				// templace("”", "&rdquo;");
+				// templace("“", "&ldquo");
+				// templace("—", "&mdash;");
+				// templace("…", "&hellip;");
+				// templace("×", "&times;");
 				loggy("this should be the cleaned string: " + clean);
 				// auto aaa = new regex;
 				try
@@ -425,19 +459,22 @@ void sClean::spClean(string &tmp)
 				}
 				catch (exception)
 				{
-					cout << "there's some parenthetical nonsense happening on line " << to_string(numLines) << " preventing us from inserting our " << Orpls << " and " << Erpls << "." << endl;
+					cout << "there's some parenthetical nonsense happening on line " << to_string(numLines) << " (approx. line " << to_string(numLines - bodLine) << " on the output) preventing us from inserting our " << Orpls << " and " << Erpls << "." << endl;
 				}
-				loggy("the cleaned string: \n\t" + tmp);
+				// loggy("the cleaned string: \n\t" + tmp);
 				ma = false;
 			}
 		}
 	}
 	// delete all other <span> instances indiscriminately
+	if (regex_search(tmp, regex("href=\"https://www.google.com/url?=\\S+&sa=\\S+\""))) {
+		// remove that google tracker nonsense
+	}
 	tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
 	tmp = regex_replace(tmp, regex("</span>"), "");
 	for (auto i : asciis)
 	{
-		//
+		// replace the ascii escape characters
 		string s{char(i)};
 		templace(tmp, "&#" + to_string(i) + ";", s);
 	}
@@ -518,10 +555,10 @@ void sClean::reset()
 
 void sClean::executor()
 { // so how this should probably work to keep everything inside one while loop is that the major functions like findStyle() and stuff, when they're done running, they should basically switch the findEl w/in them, rather than have it happen here in the executor
-	if (!bulk)
-	{
-		inputName();
-	} // set the name, if it's not a bulk
+	// if (!bulk)
+	// {
+	// 	inputName();
+	// } // set the name, if it's not a bulk
 	// loggy("\nNow logging for: " + fname + "\n");
 	setType("html");
 	// sClean::open(rawStream, getFullPath());
@@ -562,9 +599,6 @@ void sClean::executor()
 			else if (!bodySw)
 			{
 				sanitize(); // otherwise, we're sanitizing the body
-							// if (numLines%25 == 0) { //log every 10 lines bc i'm not trying to be that much of a menace
-							// 	loggy(el + " " + to_string(numLines) +": " + temp);
-							// }
 			}
 		}
 		if (regex_search(temp, elStart))
@@ -579,7 +613,10 @@ void sClean::executor()
 	// reset these outside of the while loop in order to keep it from looping twice.
 	setRaw(getTmpPath());
 	setClean(getFullPath(false));
-	nester(); // then finally, take the temp file and output it somewhere proper
+	while (getline(raw, temp)) {
+		nester(); // then finally, take the temp file and output it somewhere proper
+	}
+	
 
 	reset();
 	// loggy("End of logging for: " + fname + "\n");
