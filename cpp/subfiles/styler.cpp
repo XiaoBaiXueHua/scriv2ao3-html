@@ -80,7 +80,7 @@ void sClean::findStyle()
 	if (foundEl)
 	{
 		smatch m;
-		if (regex_search(temp, m, regex("(p|span|h\\d).")))
+		if (regex_search(temp, m, regex("^(p|span|h\\d)."))) // will only find els now at least. plain classes from gdoc exports you are still kinda fucked
 		{
 			string mstr = m.str().substr(0, m.str().length() - 1); // pop off the .
 			// auto vpt = new vector<vector<string>>;
@@ -266,7 +266,7 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 		// cout << "this is a relevant " << elm << " rule! here's the full string we'll be looking at:\n" << l << "\n\n";
 		vector<string> r;
 		r.push_back(elm);
-		const regex klass(elm + ".\\S+");
+		const regex klass(elm + ".+[^\\{]");
 		smatch mitch;
 		if (regex_search(l, mitch, klass))
 		{
@@ -275,7 +275,7 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 		try {
 			l = regex_replace(l, regex("(\\{|\\}|" + mitch.str() + "|\\s{2,})"), ""); // clean off the curly brackets, as well as the class substring and 2+ spaces
 		} catch (exception ) {
-			cout << "\nOh boy something happened with the detector regex on line " << numLines << ". The submatch:\n\t" << mitch.str();
+			cout << "\nOh boy something happened with the detector regex on line " << numLines-1 << ". The element in question: " << elm << "\nThe submatch:\n\t" << mitch.str();
 			cleaned << "/* an error happened on this line */ ";
 		}
 		string temp2;
