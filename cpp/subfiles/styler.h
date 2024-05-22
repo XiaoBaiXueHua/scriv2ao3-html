@@ -38,11 +38,13 @@ public:
 	void redirStream(std::fstream &, std::string, bool);
 	void inputName();
 	void setBatch(bool);
-	void setiPath(std::string), setoPath(std::string), setName(std::string), setType(std::string); //set the current path, name, n type of file being worked with
+	void setiPath(std::string), setoPath(std::string), setType(std::string); //set the current path, name, n type of file being worked with
 	void setRaw(std::string), setClean(std::string);
 	// std::fstream getRaw(), getClean();
 	std::string getFullPath(bool), getTmpPath();
 	void resetLineNum();
+
+	void gClean(); // for cleaning up google docs specifically
 
 	//f'ns for pushing the important style rules into a vector
 	void Detector(std::vector<std::vector<std::string>>&, std::string, std::string);

@@ -18,7 +18,7 @@ using namespace std;
 int main()
 {
 	char ans{'y'}, changeDir{'n'}, instr{'n'};
-	bool showIns{true}, gdoc{false}; 
+	bool showIns{true}, gdoc{true}; 
 	int opt{0};
 	string dir{""};
 	if (!showIns)
@@ -64,14 +64,15 @@ int main()
 			scriv.setBatch(false);
 			scriv.inputName(); // better to just have this outside the execution tbh
 			if (gdoc) {
-				scriv.setType("html");
-				scriv.setRaw(scriv.getFullPath(true));
-				scriv.setClean(scriv.getTmpPath());
-				string temp;
+				scriv.gClean();
+				// scriv.setType("html");
+				// scriv.setRaw(scriv.getFullPath(true));
+				// scriv.setClean(scriv.getTmpPath());
+				// string temp;
 				
-				scriv.unminify();
+				// scriv.unminify();
 				// and then swap the streams and replace the original raw w/the unminified version
-				break;
+				// break;
 			}
 			scriv.executor();
 		}

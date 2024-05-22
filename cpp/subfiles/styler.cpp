@@ -15,7 +15,7 @@
 using namespace std;
 
 // bad practice global var bc im Do Not Believe it needs to be a private member. there's enough of these.
-string anyClass{"class=\"(\\w|\\d|-)+\""}, anyEl{"(\\s?(\\w|\\d|=|\")+)*"};
+string anyClass{"class=\"(\\w|\\d|-)+\""}, anyEl{"(\\s?(\\w|\\d|=|\\\")+)*"};
 
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
 inline void ltrim(string &s)
@@ -53,12 +53,14 @@ sClean::sClean(string path)
 	setoPath("output");
 }
 
-void sClean::unminify() { // well. could probably just use nester() for this
+void sClean::unminify()
+{																									  // well. could probably just use nester() for this
 	vector<string> blockEls{"p", "ol", "ul", "blockquote", "style", "div", "details", "table", "tr"}; // for now doesn't include <li>
-	for (string e : blockEls) {
-		templace("</"+e+">", "</"+e+">\n"); // replace them all w/newlines
+	for (string e : blockEls)
+	{
+		templace("</" + e + ">", "</" + e + ">\n"); // replace them all w/newlines
 	}
-} 
+}
 
 void sClean::findStyle()
 { // takes the raw stream bc it will open the cleaned stream w/in the function. also the raw stream should be an html file
@@ -125,23 +127,23 @@ void sClean::nester()
 	// remove this one from the loop as well so that it can be used in unminify as well
 	// while (getline(raw, temp))
 	// {
-		// loggy(temp);
-		// templace("<p>", "<p>\n"); // new line for each paragraph
-		// templace("</p>", "\n</p>");
-		// templace("</p>", "</p>\n");
-		templace("<p>\\s+</p>", "<p>&nbsp;</p>"); 
-		unnest("blockquote");
-		// unnest("pre"); // for when i eventually figure out how to get it to do <code> and <pre>
-		// templace("</li>", "</li>\n");
-		// unnest("li", true);
-		unnest("ol");
-		unnest("ul");
+	// loggy(temp);
+	// templace("<p>", "<p>\n"); // new line for each paragraph
+	// templace("</p>", "\n</p>");
+	// templace("</p>", "</p>\n");
+	templace("<p>\\s+</p>", "<p>&nbsp;</p>");
+	unnest("blockquote");
+	// unnest("pre"); // for when i eventually figure out how to get it to do <code> and <pre>
+	// templace("</li>", "</li>\n");
+	// unnest("li", true);
+	unnest("ol");
+	unnest("ul");
 
-		// first unnest all your things, then unminify the rest
-		unminify();
-		// cout << "Now unnesting the string:\n";
-		// cout << temp << endl;
-		cleaned << temp;
+	// first unnest all your things, then unminify the rest
+	unminify();
+	// cout << "Now unnesting the string:\n";
+	// cout << temp << endl;
+	cleaned << temp;
 	// }
 
 	// there has got to be a way to do this efficiently even w/large files... since we're working w/streams here, then maybe do peek during the sanitize step of the blockClean()
@@ -161,10 +163,10 @@ void sClean::unnest(string elm)
 void sClean::templace(string &str, string exp, string rep)
 {
 	// regex r(R"("+exp)");
-	if (regex_search(str, regex(exp))) { // only proceed if the thing actually exists
+	if (regex_search(str, regex(exp)))
+	{ // only proceed if the thing actually exists
 		str = regex_replace(str, regex(exp), rep);
 	}
-	
 }
 void sClean::templace(string exp, string rep)
 {
@@ -180,17 +182,19 @@ void sClean::inputName()
 	string filename{""};
 	cout << "Choose the name of the html file to open: ";
 	cin >> filename;
-	setName(filename);
+	fname = filename;
+	tmpname = filename + "_tmp";
+	// setName(filename);
 }
 void sClean::setBatch(bool b) { bulk = b; }
 
 void sClean::setiPath(string str) { fipath = str + "/"; } // will also automatically add in the /
 void sClean::setoPath(string str) { fopath = str + "/"; }
-void sClean::setName(string str)
-{
-	fname = str;
-	tmpname = str + "_tmp";
-} // the name should only really be used once
+// void sClean::setName(string str)
+// {
+// 	fname = str;
+// 	tmpname = str + "_tmp";
+// } // the name should only really be used once
 void sClean::setType(string str) { ftype = "." + str; } // so in this case, Do Not include the period
 
 // functions for redirecting the stream to other files
@@ -201,7 +205,7 @@ void sClean::redirStream(fstream &stm, string path, bool clear = false)
 		if (clear)
 		{
 			stm.clear();
-		};			 // clear it if you're supposed to
+		}; // clear it if you're supposed to
 		stm.close(); // then just close it
 	}
 	sClean::open(stm, path, false); // and then do the standard opening procedure
@@ -240,7 +244,7 @@ void sClean::resetLineNum() { numLines = 1; } // should be set to 1 bc getline s
 void sClean::findEl(string name)
 {
 	el = name;
-	elStart = "<" + el + ">";
+	elStart = "<" + el + anyEl + ">";
 	elEnd = "</" + el + ">";
 	// loggy(vector<string>{"looking for: " + name, "with regexp start: <" + el + "> and regexp end: </" + el + ">"});
 }
@@ -262,13 +266,18 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 		// cout << "this is a relevant " << elm << " rule! here's the full string we'll be looking at:\n" << l << "\n\n";
 		vector<string> r;
 		r.push_back(elm);
-		const regex klass(elm + ".(\\S)+");
+		const regex klass(elm + ".\\S+");
 		smatch mitch;
 		if (regex_search(l, mitch, klass))
 		{
 			r.push_back(mitch.str().substr(elm.length() + 1, mitch.str().length())); // should return just the class name
 		}
-		l = regex_replace(l, regex("(\\{|\\}|" + mitch.str() + "|\\s{2,})"), ""); // clean off the curly brackets, as well as the class substring and 2+ spaces
+		try {
+			l = regex_replace(l, regex("(\\{|\\}|" + mitch.str() + "|\\s{2,})"), ""); // clean off the curly brackets, as well as the class substring and 2+ spaces
+		} catch (exception ) {
+			cout << "\nOh boy something happened with the detector regex on line " << numLines << ". The submatch:\n\t" << mitch.str();
+			cleaned << "/* an error happened on this line */ ";
+		}
 		string temp2;
 		istringstream line;
 		line.str(trim(l));
@@ -467,7 +476,8 @@ void sClean::spClean(string &tmp)
 		}
 	}
 	// delete all other <span> instances indiscriminately
-	if (regex_search(tmp, regex("href=\"https://www.google.com/url?=\\S+&sa=\\S+\""))) {
+	if (regex_search(tmp, regex("href=\"https://www.google.com/url?=\\S+&sa=\\S+\"")))
+	{
 		// remove that google tracker nonsense
 	}
 	tmp = regex_replace(tmp, regex("<span " + anyClass + ">"), "");
@@ -477,6 +487,75 @@ void sClean::spClean(string &tmp)
 		// replace the ascii escape characters
 		string s{char(i)};
 		templace(tmp, "&#" + to_string(i) + ";", s);
+	}
+}
+
+void sClean::gClean()
+{
+	int o{0};
+	bool e{false};
+	cout << endl
+		 << "Has the file been exported from Google Docs or been otherwise minified?\n"
+		 << setw(5) << "1." << " Yes\n"
+		 << setw(5) << "2." << " No\n\t> ";
+	cin >> o;
+	while (!e)
+	{
+		loggy("File has been minified.");
+		switch (o)
+		{
+		case 1:
+		{
+			// const char *sq = char(125);
+			// string sq("}");
+			loggy("Now trying to gClean.");
+			e=true;
+			setType("html");
+			setRaw(getFullPath(true));
+			setClean(getTmpPath());
+			while (getline(raw, temp))
+			{
+				// nester(); // unnest the things
+
+				// templace("style " + anyClass)
+				unminify();
+				templace("\"text/css\">", "\"text/css\">\n");
+				try {
+					// templace(to_string(char(125)), to_string(char(125))+"\n"); // and then also start newlines for curly bracket things
+					templace("\\}", "}\n");
+				} catch (exception ee) {
+					cout << "Hmm. Yeah there's something wrong with trying to regex with }.\n";
+				}
+				cleaned << temp;
+			}
+			// squiggle = nullptr;
+			// delete squiggle;
+			raw.clear(); // clear out the raw
+			setRaw(getTmpPath());
+			setClean(getFullPath(true));
+			// raw.clear(); // clear out the raw
+			// raw.swap(cleaned); // swap them
+			while (getline(raw, temp)) {
+				cleaned << temp << endl;
+
+			}
+			// raw.clear();
+			// raw.swap(cleaned); // swap them back just in case
+			raw.close();
+			cleaned.close();
+			break;
+		}
+		case 2:
+		{
+			e=true;
+			break;
+		}
+		default:
+		{
+			cout << "That's not an option. Try again.\n\t> ";
+			cin >> o;
+		}
+		}
 	}
 }
 
@@ -571,6 +650,7 @@ void sClean::executor()
 	resetLineNum(); // reset the current line number
 	// el = "style";
 	findEl("style", "type=\"text/css\""); // sets the private regexps for el start n end, in this case for the styling
+	// findEl("style");
 	loggy("findEl now searching for the style.");
 
 	while (getline(raw, temp))
@@ -613,10 +693,10 @@ void sClean::executor()
 	// reset these outside of the while loop in order to keep it from looping twice.
 	setRaw(getTmpPath());
 	setClean(getFullPath(false));
-	while (getline(raw, temp)) {
+	while (getline(raw, temp))
+	{
 		nester(); // then finally, take the temp file and output it somewhere proper
 	}
-	
 
 	reset();
 	// loggy("End of logging for: " + fname + "\n");
