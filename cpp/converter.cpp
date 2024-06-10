@@ -8,7 +8,7 @@
 // #include <regex>
 // #include <chrono>
 // #include <ctime>
-// #include <filesystem>
+#include <filesystem>
 #include "subfiles/styler.h"
 #include "subfiles/styler.cpp"
 #include "subfiles/jkp_std.h"
@@ -48,21 +48,30 @@ int main()
 	// main loop
 	while (toupper(ans) == 'Y')
 	{
-		// project::center(50, "~~~ Options ~~");
-		// std::cout << setw(5) << "1" << ". Convert a single HTML file." << endl;
-		// std::cout << setw(5) << "2" << ". Convert a folder o2 HTML files.\n"
-		// 	 << endl;
-		// std::cout << "Please choose an option: ";
-		// cin >> opt;
+		project::center(50, "~~~ Options ~~");
+		std::cout << setw(5) << "1" << ". Convert a single HTML file." << endl;
+		std::cout << setw(5) << "2" << ". Convert a folder of HTML files.\n"
+			 << endl;
+		std::cout << "Please choose an option: ";
+		cin >> opt;
 		if (opt == 2) {
 			scriv.setBatch(true);
-			std::cout << "Please enter the name of the folder you would like to convert: ";
-			std::cin >> dir;
-			// const filesystem::path fol{"cazzo"};
-			// std::cout << "The files available: " << endl;
-			// for (auto const& dir_entry : filesystem::directory_iterator{fol}) {
-			// 	std::cout << dir_entry.path() << endl;
-			// }
+			// std::cout << "Please enter the name of the folder you would like to convert: ";
+			// std::cin >> dir;
+			// const filesystem::path fol{dir};
+			cout << "setting fol to \"html/cazzo\"" << endl;
+			const filesystem::path fol({"html\\cazzo"});
+			std::cout << "The files available: " << endl;
+			int numFiles{0};
+			for (auto const& dir_entry : filesystem::directory_iterator{fol}) {
+				std::cout << setw(15) << numFiles << ". " << dir_entry.path() << endl;
+				numFiles++;
+			}
+			cout << "Would you like to:\n\t1. Convert each of these files into their own separate, cleaned files?\n\t2. Merge each of these files into one cleaned html file?\n\t3. Only convert one (or some) of these files? ";
+			cin >> opt;
+			if (opt == 2) {
+				cout << "Would you like to reorder them from the order presented? [Y/y]: ";
+			}
 			break;
 		} else {
 			scriv.setBatch(false);

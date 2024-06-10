@@ -301,7 +301,7 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 		smatch mitch; // okay so this new compiler sees mitch as a vector in the debug
 		regex_search(l, mitch, klass);
 		const string mStr = mitch.str();
-		cout << mStr << endl;
+		// cout << mStr << endl;
 		if (mitch.length() > 0)
 		{
 			// r.push_back(trim(mStr.substr(elm.length() + 1, mStr.length()))); // should return just the class name
@@ -495,10 +495,10 @@ void sClean::spClean(string &tmp)
 				string clean = regex_replace(spn, regex("<span " + anyClass + ">"), Orpls); // so first we clean up the submatch. bc we're only working w/one <span> at a time, we can just do anyClass
 				clean = regex_replace(clean, regex("</span>"), Erpls);						// and then we clean
 				// these are supposed to clean up the various things not converted to html by scrivener, but it seems that shan't be happening for now
-				// templace("’", "&rsquo;");
-				// templace("‘", "&lsquo;");
+				templace("\\u2019", "&rsquo;");
+				templace("\\u2018", "&lsquo;");
 				// templace("”", "&rdquo;");
-				// templace("“", "&ldquo");
+				templace("\\201C", "&ldquo");
 				// templace("—", "&mdash;");
 				// templace("…", "&hellip;");
 				// templace("×", "&times;");
