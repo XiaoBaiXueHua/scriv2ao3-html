@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <cmath>
 class project {
 	public:
 		project(){}; //default constructor
@@ -23,8 +24,8 @@ class project {
 		}
 
 		static void center(unsigned int width, std::string str) {
-			unsigned int str_len{str.length()};
-			double w{((width < str_len) ? (width + str_len) : (width + ceil(str_len/2)))}; // "ceil" is a double, so have to use double here as well
+			long long unsigned int str_len{str.length()};
+			double w{((width < str_len) ? (width + str_len) : (width + std::ceil(str_len/2)))}; // "ceil" is a double, so have to use double here as well
 			std::cout << std::setw(w) << str << std::endl;
 		}
 		static void centerBloc(int width, std::vector<std::string>&strs) { 

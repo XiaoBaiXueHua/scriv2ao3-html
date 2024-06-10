@@ -24,7 +24,13 @@ public:
 		delete vpt;
 		delete strPt;
 	};
+	// functions for externally making rules
+	void ruleInit(std::vector<std::string>);
+	void ruleInit(std::fstream &);
+	void valInit(std::vector<std::string>); 
+	void valInit(std::fstream &);
 
+	std::regex toRegEx(std::string);
 	void findStyle();
 
 	void sanitize();
@@ -61,7 +67,7 @@ public:
 	void executor(); // executes all the actions based on the filename provided by the string
 
 	static void open(std::fstream &, std::string, bool); // function for automatically making files n optionally appending text to them
-
+	
 	void loggy(std::string);
 	void loggy(std::vector<std::string>&);
 	void loggy(std::vector<std::vector<std::string>>&);
@@ -80,6 +86,8 @@ private:
 	std::regex elStart, elEnd; //regexes for the starting and ending elements that get used n redeclared during loops
 	std::vector<std::vector<std::string>>impSp, impP; //vectors for the important p's n sp's
 	std::vector<std::string>*strPt; // pointer to work w/the rules vectors
+	// std::vector<std::string>rls, vls; // rules n values to be set in main() for the styler to search for
+	std::regex rls, vls; // for the thing. you know the thing
 	std::vector<std::vector<std::string>>*vpt;
 	std::vector<int>asciis {34, 38, 39, 60, 62}; //vector of asciis that need to be replaced manually bc thanks scrivener. currently covers straight quotes, ampersands, and gt/lt
 };

@@ -10,12 +10,23 @@
 #include <iterator>
 #include <regex>
 #include <chrono>
+#include <cstdlib>
 #include "./styler.h"
 
 using namespace std;
 
 // bad practice global var bc im Do Not Believe it needs to be a private member. there's enough of these.
 string anyClass{"class=\"(\\w|\\d|-)+\""}, anyEl{"(\\s?(\\w|\\d|=|\\\")+)*"};
+
+regex sClean::toRegEx(string str) {
+	vector<string>rpls {"\\(", "\\)", "\\{", "\\}"};
+	for (string ch : rpls) {
+		str = regex_replace(str, regex(ch), "\\"+ch);
+	}
+	loggy("the regular expression: " + str);
+	cout << "the regular expression: " << str << endl;
+	return regex(str);
+}
 
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
 inline void ltrim(string &s)
@@ -53,6 +64,24 @@ sClean::sClean(string path)
 	setoPath("output");
 }
 
+// void sClean::ruleInit(vector<string> v) { rls = v; }
+void sClean::ruleInit(fstream &s) {
+	while (getline(s, temp, ',')) {
+		if(!temp.empty()) {
+			// rls.push_back(temp);
+		}
+	}
+	// loggy(rls);
+}
+// void sClean::valInit(vector<string> v) { vls = v; }
+void sClean::valInit(fstream &s) {
+	while (getline(s, temp, ',')) {
+		if(!temp.empty()) {
+			// vls.push_back(temp);
+		}
+	}
+}
+
 void sClean::unminify()
 {																									  // well. could probably just use nester() for this
 	vector<string> blockEls{"p", "ol", "ul", "blockquote", "style", "div", "details", "table", "tr"}; // for now doesn't include <li>
@@ -79,10 +108,11 @@ void sClean::findStyle()
 	}
 	if (foundEl)
 	{
+		vtrim(temp);
 		smatch m;
 		if (regex_search(temp, m, regex("^(p|span|h\\d)."))) // will only find els now at least. plain classes from gdoc exports you are still kinda fucked
 		{
-			string mstr = m.str().substr(0, m.str().length() - 1); // pop off the .
+			const string mstr = m.str().substr(0, m.str().length() - 1); // pop off the .
 			// auto vpt = new vector<vector<string>>;
 			if (mstr == "p" || regex_match(mstr, regex("h\\d"))) // will now also include headers
 			{
@@ -260,33 +290,45 @@ void sClean::findEl(string name, string attributes)
 void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 {
 	regex rule("(text-align|margin-left|text-decoration)"); // this covers both p and sp and yeah it's getting hard-coded for now. no more checking for background-color since we can't use <mark>
+	// l = trim(l);
 	if (regex_search(l, rule))
 	{
 
 		// cout << "this is a relevant " << elm << " rule! here's the full string we'll be looking at:\n" << l << "\n\n";
 		vector<string> r;
 		r.push_back(elm);
-		const regex klass(elm + ".+[^\\{]");
-		smatch mitch;
-		if (regex_search(l, mitch, klass))
+		const regex klass(elm + "\\s?[^\\{]+");
+		smatch mitch; // okay so this new compiler sees mitch as a vector in the debug
+		regex_search(l, mitch, klass);
+		const string mStr = mitch.str();
+		cout << mStr << endl;
+		if (mitch.length() > 0)
 		{
-			r.push_back(mitch.str().substr(elm.length() + 1, mitch.str().length())); // should return just the class name
+			// r.push_back(trim(mStr.substr(elm.length() + 1, mStr.length()))); // should return just the class name
+			r.push_back(mStr.substr(elm.length() + 1, mStr.length())); // should return just the class name
 		}
 		try {
-			l = regex_replace(l, regex("(\\{|\\}|" + mitch.str() + "|\\s{2,})"), ""); // clean off the curly brackets, as well as the class substring and 2+ spaces
+		// const string mStr = mitch.str();
+			// l = trim(regex_replace(l, regex("(\\{|\\}|" + mStr + "|\\s{2,})"), "")); // clean off the curly brackets, as well as the class substring and 2+ spaces
+			l = regex_replace(l, regex("(\\{|\\}|" + mStr + "|\\s{2,})"), "");
 		} catch (exception ) {
-			cout << "\nOh boy something happened with the detector regex on line " << numLines-1 << ". The element in question: " << elm << "\nThe submatch:\n\t" << mitch.str();
+			
+		// const string mStr = mitch.str();
+			cout << "\nOh boy something happened with the detector regex on line " << numLines-1 << ". The element in question: " << elm << "\nThe submatch:\n\t" << mStr;
 			cleaned << "/* an error happened on this line */ ";
 		}
 		string temp2;
 		istringstream line;
-		line.str(trim(l));
+		// line.str(trim(l));
+		line.str(l); // should be trimmed from the thing already
 
 		while (getline(line, temp2, ';'))
 		{
-			if (regex_search(temp2, mitch, rule))
+			regex_search(temp2, mitch, rule); // new mitch
+			const string mstr = mitch.str();
+			if (mstr.length() > 0)
 			{
-				string mstr = trim(mitch.str());
+				// string mstr = regex_replace(uhhh, "\\s+", "");
 				if (mstr == "margin-left")
 				{
 					if (regex_search(temp2, regex("\\d.\\d+")))
@@ -408,22 +450,22 @@ void sClean::spClean(string &tmp)
 			spRules.push_back({Orpls, Erpls});
 		}
 	}
-	if (spRules.size() > 0)
-	{
-		loggy("spInstances:");
-		loggy(spInstances);
-		loggy("spRules:");
-		loggy(spRules);
-	}
+	// if (spRules.size() > 0)
+	// {
+	// 	loggy("spInstances:");
+	// 	loggy(spInstances);
+	// 	loggy("spRules:");
+	// 	loggy(spRules);
+	// }
 	if (cleanSp)
 	{
 
 		regex spee("<span " + anyClass + ">" + "[^<]+</span>");		  // this will fail if there is another element inside it, but since scrivener keeps its <span> as the innermost els, that's fine
 		auto spStart = sregex_iterator(tmp.begin(), tmp.end(), spee); // so we basically have to pick out all the span elements
 		auto spEnd = sregex_iterator();
-		loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in:\n\t" + tmp);
+		// loggy("Found " + to_string(distance(spStart, spEnd)) + " <span> els in:\n\t" + tmp);
 
-		int k{0}; // this is for logging purposes
+		// int k{0}; // this is for logging purposes
 		for (sregex_iterator i = spStart; i != spEnd; i++)
 		{
 			Orpls = "";
@@ -431,8 +473,8 @@ void sClean::spClean(string &tmp)
 			// currClass = anyClass;	// reset this to anything at the start of each loop
 			// smatch m = *i;
 			string spn = (*i).str();
-			k++;
-			loggy("string match [" + to_string(k) + "] on line " + to_string(numLines) + ": " + spn);
+			// k++;
+			// loggy("string match [" + to_string(k) + "] on line " + to_string(numLines) + ": " + spn);
 			bool ma{false};
 			int j{0};
 			// find out if it's an instance to be replaced
@@ -460,11 +502,11 @@ void sClean::spClean(string &tmp)
 				// templace("—", "&mdash;");
 				// templace("…", "&hellip;");
 				// templace("×", "&times;");
-				loggy("this should be the cleaned string: " + clean);
+				// loggy("this should be the cleaned string: " + clean);
 				// auto aaa = new regex;
 				try
 				{
-					tmp = regex_replace(tmp, regex(spn), clean); // all right. so. it seems that we need
+					tmp = regex_replace(tmp, toRegEx(temp), clean); // all right. so. it seems that we need
 				}
 				catch (exception)
 				{
