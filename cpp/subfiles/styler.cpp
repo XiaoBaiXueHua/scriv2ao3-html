@@ -18,15 +18,29 @@ using namespace std;
 // bad practice global var bc im Do Not Believe it needs to be a private member. there's enough of these.
 string anyClass{"class=\"(\\w|\\d|-)+\""}, anyEl{"(\\s?(\\w|\\d|=|\\\")+)*"};
 
-regex sClean::toRegEx(string str) {
-	vector<string>rpls {"\\(", "\\)", "\\{", "\\}"};
-	for (string ch : rpls) {
-		str = regex_replace(str, regex(ch), "\\"+ch);
+regex sClean::toRegEx(string str)
+{
+	vector<string> rpls{"\\(", "\\)", "\\{", "\\}"};
+	for (string ch : rpls)
+	{
+		str = regex_replace(str, regex(ch), "\\\\" + ch);
 	}
 	loggy("the regular expression: " + str);
 	cout << "the regular expression: " << str << endl;
 	return regex(str);
 }
+
+// regex sClean::toRegEx(string &str)
+// {
+// 	vector<string> rpls{"\\(", "\\)", "\\{", "\\}"};
+// 	for (string ch : rpls)
+// 	{
+// 		str = regex_replace(str, regex(ch), "\\\\" + ch);
+// 	}
+// 	loggy("the regular expression: " + str);
+// 	cout << "the regular expression: " << str << endl;
+// 	return regex(str);
+// }
 
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
 inline void ltrim(string &s)
@@ -65,18 +79,24 @@ sClean::sClean(string path)
 }
 
 // void sClean::ruleInit(vector<string> v) { rls = v; }
-void sClean::ruleInit(fstream &s) {
-	while (getline(s, temp, ',')) {
-		if(!temp.empty()) {
+void sClean::ruleInit(fstream &s)
+{
+	while (getline(s, temp, ','))
+	{
+		if (!temp.empty())
+		{
 			// rls.push_back(temp);
 		}
 	}
 	// loggy(rls);
 }
 // void sClean::valInit(vector<string> v) { vls = v; }
-void sClean::valInit(fstream &s) {
-	while (getline(s, temp, ',')) {
-		if(!temp.empty()) {
+void sClean::valInit(fstream &s)
+{
+	while (getline(s, temp, ','))
+	{
+		if (!temp.empty())
+		{
 			// vls.push_back(temp);
 		}
 	}
@@ -220,6 +240,7 @@ void sClean::setBatch(bool b) { bulk = b; }
 
 void sClean::setiPath(string str) { fipath = str + "/"; } // will also automatically add in the /
 void sClean::setoPath(string str) { fopath = str + "/"; }
+void sClean::setFullPath(string str) { fullPath = str; }
 // void sClean::setName(string str)
 // {
 // 	fname = str;
@@ -255,8 +276,13 @@ void sClean::setClean(string path)
 
 string sClean::getFullPath(bool instream) // true means it's the input path
 {										  // just to quickly concatenate that
-	string fpath = instream ? fipath : fopath;
-	fullPath = fpath + fname + ftype;
+	if (!bulk || !instream) // if it's not bulk, then it gets to eval the whole thing (correct)
+	{
+		// string fpath = instream ? fipath : fopath;
+		// return fpath + fname + ftype;
+		return (instream ? fipath : fopath) + fname + ftype;
+	}
+
 	// loggy("full path: "+fullPath);
 	return fullPath;
 }
@@ -307,14 +333,17 @@ void sClean::Detector(vector<vector<string>> &els, string elm, string l)
 			// r.push_back(trim(mStr.substr(elm.length() + 1, mStr.length()))); // should return just the class name
 			r.push_back(mStr.substr(elm.length() + 1, mStr.length())); // should return just the class name
 		}
-		try {
-		// const string mStr = mitch.str();
+		try
+		{
+			// const string mStr = mitch.str();
 			// l = trim(regex_replace(l, regex("(\\{|\\}|" + mStr + "|\\s{2,})"), "")); // clean off the curly brackets, as well as the class substring and 2+ spaces
 			l = regex_replace(l, regex("(\\{|\\}|" + mStr + "|\\s{2,})"), "");
-		} catch (exception ) {
-			
-		// const string mStr = mitch.str();
-			cout << "\nOh boy something happened with the detector regex on line " << numLines-1 << ". The element in question: " << elm << "\nThe submatch:\n\t" << mStr;
+		}
+		catch (exception)
+		{
+
+			// const string mStr = mitch.str();
+			cout << "\nOh boy something happened with the detector regex on line " << numLines - 1 << ". The element in question: " << elm << "\nThe submatch:\n\t" << mStr;
 			cleaned << "/* an error happened on this line */ ";
 		}
 		string temp2;
@@ -551,7 +580,7 @@ void sClean::gClean()
 			// const char *sq = char(125);
 			// string sq("}");
 			loggy("Now trying to gClean.");
-			e=true;
+			e = true;
 			setType("html");
 			setRaw(getFullPath(true));
 			setClean(getTmpPath());
@@ -562,10 +591,13 @@ void sClean::gClean()
 				// templace("style " + anyClass)
 				unminify();
 				templace("\"text/css\">", "\"text/css\">\n");
-				try {
+				try
+				{
 					// templace(to_string(char(125)), to_string(char(125))+"\n"); // and then also start newlines for curly bracket things
 					templace("\\}", "}\n");
-				} catch (exception ee) {
+				}
+				catch (exception ee)
+				{
 					cout << "Hmm. Yeah there's something wrong with trying to regex with }.\n";
 				}
 				cleaned << temp;
@@ -577,9 +609,9 @@ void sClean::gClean()
 			setClean(getFullPath(true));
 			// raw.clear(); // clear out the raw
 			// raw.swap(cleaned); // swap them
-			while (getline(raw, temp)) {
+			while (getline(raw, temp))
+			{
 				cleaned << temp << endl;
-
 			}
 			// raw.clear();
 			// raw.swap(cleaned); // swap them back just in case
@@ -589,7 +621,7 @@ void sClean::gClean()
 		}
 		case 2:
 		{
-			e=true;
+			e = true;
 			break;
 		}
 		default:

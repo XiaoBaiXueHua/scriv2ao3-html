@@ -11,6 +11,7 @@
 #include <iterator>
 #include <regex>
 #include <chrono>
+#include <filesystem>
 
 class sClean{
 public:
@@ -31,6 +32,7 @@ public:
 	void valInit(std::fstream &);
 
 	std::regex toRegEx(std::string);
+	// std::regex toRegEx(std::string &);
 	void findStyle();
 
 	void sanitize();
@@ -44,7 +46,7 @@ public:
 	void redirStream(std::fstream &, std::string, bool);
 	void inputName();
 	void setBatch(bool);
-	void setiPath(std::string), setoPath(std::string), setType(std::string); //set the current path, name, n type of file being worked with
+	void setiPath(std::string), setoPath(std::string), setFullPath(std::string), setType(std::string); //set the current path, name, n type of file being worked with
 	void setRaw(std::string), setClean(std::string);
 	// std::fstream getRaw(), getClean();
 	std::string getFullPath(bool), getTmpPath();

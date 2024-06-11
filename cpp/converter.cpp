@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-// #include <iterator>
-// #include <regex>
+#include <iterator>
+#include <regex>
 // #include <chrono>
 // #include <ctime>
 #include <filesystem>
@@ -17,7 +17,7 @@ using namespace std;
 
 int main()
 {
-	char ans{'y'}, changeDir{'n'}, instr{'n'};
+	char ans{'y'}, reorder{'n'}, instr{'n'};
 	bool showIns{true}, gdoc{false}; 
 	int opt{0};
 	string dir{""};
@@ -63,14 +63,37 @@ int main()
 			const filesystem::path fol({"html\\cazzo"});
 			std::cout << "The files available: " << endl;
 			int numFiles{0};
+			vector<filesystem::path> files = {};
 			for (auto const& dir_entry : filesystem::directory_iterator{fol}) {
-				std::cout << setw(15) << numFiles << ". " << dir_entry.path() << endl;
+				files.push_back(dir_entry.path());
 				numFiles++;
+				std::cout << setw(15) << numFiles << ". " << dir_entry.path() << endl;
 			}
-			cout << "Would you like to:\n\t1. Convert each of these files into their own separate, cleaned files?\n\t2. Merge each of these files into one cleaned html file?\n\t3. Only convert one (or some) of these files? ";
+			cout << "Would you like to:\n\t1. Convert each of these files into their own separate, cleaned files?\n\t2. Merge each of these files into one cleaned html file?" << endl;
 			cin >> opt;
 			if (opt == 2) {
-				cout << "Would you like to reorder them from the order presented? [Y/y]: ";
+				vector<int> order = {};
+				int num{0};
+				cout << "Would you like to reorder them from the order presented? Enter [Y/y] if so: ";
+				cin >> reorder;
+				if (toupper(reorder) == 'Y') {
+					cout << "Please enter the order you would like the files to be in, by the numbers they were assigned earlier: " << endl;;
+					for (int i{0}; i < numFiles; i++) {
+						cout << "\t" << i+1 << ". ";
+						cin >> num;
+						cout << i+1 << ". " << files[num-1] << endl;
+						order.push_back(num);
+					}
+				}
+			} else if (opt == 1) {
+				for (auto const& dir_entry : files) {
+					// string path{dir_entry.path().string()};
+					// string file = regex_replace(dir_entry.string(), scriv.toRegEx(dir), "");
+					scriv.setFullPath(dir_entry.string());
+					cout << "Now cleaning " << dir_entry.string() << endl;
+					scriv.executor();
+					// cout << "file to be cleaned: " << file << endl;
+				}
 			}
 			break;
 		} else {
@@ -89,21 +112,22 @@ int main()
 			}
 			scriv.executor();
 		}
-		std::cout << "Enter Y/y to convert another file, or else hit any key to exit: ";
+		std::cout << "Enter Y/y to convert more file(s), or else hit any key to exit: ";
 		std::cin >> ans;
 
-		if (toupper(ans) == 'Y')
-		{
-			std::cout << "\n\nWould you like to change the source folder for the html file? ";
-			std::cin >> changeDir;
-			if (toupper(changeDir) == 'Y')
-			{
-				std::cout << "\nPlease specify the name of the file folder: ";
-				std::cin >> dir;
-				scriv.setiPath(dir);
-				std::cout << endl;
-			}
-		}
+		// if (toupper(ans) == 'Y')
+		// {
+		// 	std::cout << "\n\nWould you like to change the source folder for the html file? ";
+		// 	std::cin >> changeDir;
+		// 	if (toupper(changeDir) == 'Y')
+		// 	{
+		// 		std::cout << "\nPlease specify the name of the file folder: ";
+		// 		std::cin >> dir;
+		// 		scriv.setiPath(dir);
+		// 		std::cout << endl;
+		// 	}
+		// }
 	}
+	r.close(); // don't forget to close the rules lol
 	return 0;
 }
