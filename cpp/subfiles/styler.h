@@ -44,7 +44,7 @@ public:
 	void findEl(string);
 	void findEl(string, string); //overloading for when you want to find an element w/a particular param, like how <style> has "type=text/css" in it.
 	void redirStream(fstream &, string, bool);
-	void inputName();
+	void inputName(), setName(string);
 	void setBatch(bool);
 	void setiPath(string), setoPath(string), setFullPath(string), setType(string); //set the current path, name, n type of file being worked with
 	void setRaw(string), setClean(string);
@@ -81,6 +81,7 @@ private:
 	int numLines{1}, bodLine{1}; //this really probably does not need to be private... maybe static though!
 	bool foundEl{false}, styleSw{false}, bodySw{false}, tmpEl{false}, bulk{false}; //generic switch that flips around depending on whether we've found our currently searched-for el, and then perm switches for style n body
 	string fname{""}, tmpname{""}, fipath{""}, fopath{""}, ftype{""}, fullPath{""}; //filepath n filename
+	filesystem::path path{""};
 	string temp{""}, el{""}; //i suspect i will probably want somewhere to temporarily hold strings when tossing them around
 	// string quot{char(34)}, lt{char(60)}, gt{char(62)}, amp{char(38)}; //need this for, like. man idk why the regex doesn't take it as it is.
 	fstream raw, cleaned; //the two streams for the input/output

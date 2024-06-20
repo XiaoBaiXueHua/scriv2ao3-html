@@ -18,7 +18,7 @@ using namespace std;
 int main()
 {
 	char ans{'y'}, reorder{'n'}, instr{'n'};
-	bool showIns{true}, gdoc{false}; 
+	bool showIns{true}, gdoc{false};
 	int opt{0};
 	string dir{""};
 	if (!showIns)
@@ -44,50 +44,78 @@ int main()
 	// scriv.setClean("tmp/sffp_tmp.html");
 	// scriv.nester();
 
-
 	// main loop
 	while (toupper(ans) == 'Y')
 	{
 		project::center(50, "~~~ Options ~~");
 		std::cout << setw(5) << "1" << ". Convert a single HTML file." << endl;
 		std::cout << setw(5) << "2" << ". Convert a folder of HTML files.\n"
-			 << endl;
+				  << endl;
 		std::cout << "Please choose an option: ";
 		cin >> opt;
 		// test to make sure what was input was actually a fucking number
-		if (opt == 2) {
+		if (opt == 2)
+		{
 			scriv.setBatch(true);
 			// std::cout << "Please enter the name of the folder you would like to convert: ";
 			// std::cin >> dir;
 			// const filesystem::path fol{dir};
 			cout << "setting fol to \"html/cazzo\"" << endl;
 			const filesystem::path fol({"html"});
-			std::cout << "The files available: " << endl;
+			std::cout << "The files available: \nIn the root " << fol << " folder: " << endl;
 			int numFiles{0};
 			vector<filesystem::path> files = {}, dirs = {};
-			for (auto const& dir_entry : filesystem::recursive_directory_iterator{fol}) {
-				dir_entry.is_directory() ? dirs.push_back(dir_entry.path()) : files.push_back(dir_entry.path());
-				numFiles++;
-				std::cout << setw(15) << numFiles << ". " << dir_entry.path() << ", is directory? " << dir_entry.is_directory() << endl;
+			// for (auto const &dir_entry : filesystem::recursive_directory_iterator{fol})
+			for (auto const &dir_entry : filesystem::directory_iterator{fol})
+			{
+				// dir_entry.is_directory() ? dirs.push_back(dir_entry.path()) : files.push_back(dir_entry.path());
+				filesystem::path currPath{dir_entry.path()};
+				if (dir_entry.is_directory())
+				{
+					std::cout << "In the " << currPath.filename() << " folder, we have:\n";
+				}
+				else if (regex_search(currPath.extension().string(), regex("html")))
+				{
+					// std::cout << "currPath.extension().string().substr(1, currPath.extension().string().length())" << currPath.extension().string().substr(1, currPath.extension().string().length()) << endl;
+					// string fp{currPath.extension().string()}; // gotta declare it as a string i guess
+					// if (regex_search(fp, regex("html"))) {
+					// 	// 
+					// }
+					numFiles++;
+					std::cout << setw(15) << numFiles << ". " << currPath.filename() << endl;
+					// std::cout << "(current path extension is " << currPath.extension() << ")";
+				}
+				//
+				// std::cout << setw(15) << numFiles << ". " << dir_entry.path() << ", is directory? " << dir_entry.is_directory() << endl;
 			}
+			// for (auto const& file : files) {
+			// 	std::cout << setw(15) << numFiles << ". " << file.filename();
+			// }
 			cout << "Would you like to:\n\t1. Convert each of these files into their own separate, cleaned files?\n\t2. Merge each of these files into one cleaned html file?\n\t3. Exit the program?" << endl;
 			cin >> opt;
-			if (opt == 2) {
+			if (opt == 2)
+			{
 				vector<int> order = {};
 				int num{0};
 				cout << "Would you like to reorder them from the order presented? Enter [Y/y] if so: ";
 				cin >> reorder;
-				if (toupper(reorder) == 'Y') {
-					cout << "Please enter the order you would like the files to be in, by the numbers they were assigned earlier: " << endl;;
-					for (int i{0}; i < numFiles; i++) {
-						cout << "\t" << i+1 << ". ";
+				if (toupper(reorder) == 'Y')
+				{
+					cout << "Please enter the order you would like the files to be in, by the numbers they were assigned earlier: " << endl;
+					;
+					for (int i{0}; i < numFiles; i++)
+					{
+						cout << "\t" << i + 1 << ". ";
 						cin >> num;
-						cout << i+1 << ". " << files[num-1] << endl;
+						cout << i + 1 << ". " << files[num - 1] << endl;
 						order.push_back(num);
 					}
 				}
-			} else if (opt == 1) {
-				for (auto const& dir_entry : files) {
+			}
+			else if (opt == 1)
+			{
+				for (auto const &dir_entry : files)
+				{
 					// string path{dir_entry.path().string()};
 					// string file = regex_replace(dir_entry.string(), scriv.toRegEx(dir), "");
 					scriv.setFullPath(dir_entry.string());
@@ -95,20 +123,25 @@ int main()
 					scriv.executor();
 					// cout << "file to be cleaned: " << file << endl;
 				}
-			} else if (opt == 3) {
+			}
+			else if (opt == 3)
+			{
 				exit(0);
 			}
-			// break;
-		} else {
+			break;
+		}
+		else
+		{
 			scriv.setBatch(false);
 			scriv.inputName(); // better to just have this outside the execution tbh
-			if (gdoc) {
+			if (gdoc)
+			{
 				scriv.gClean();
 				// scriv.setType("html");
 				// scriv.setRaw(scriv.getFullPath(true));
 				// scriv.setClean(scriv.getTmpPath());
 				// string temp;
-				
+
 				// scriv.unminify();
 				// and then swap the streams and replace the original raw w/the unminified version
 				// break;

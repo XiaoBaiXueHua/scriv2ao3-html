@@ -222,10 +222,13 @@ void sClean::inputName()
 	string filename{""};
 	cout << "Choose the name of the html file to open: ";
 	// cin >> filename;
-	getline(cin >> ws, filename); // this should allow for spaces in the filename
-	fname = filename;
-	tmpname = filename + "_tmp";
+	getline(cin >> ws, filename); // this should allow for spaces in the filename https://stackoverflow.com/questions/5838711/stdcin-input-with-spaces
+	setName(filename);
 	// setName(filename);
+}
+void sClean::setName(string str) { // we need this for the batch conversion
+	fname = str;
+	tmpname = str + "_tmp";
 }
 void sClean::setBatch(bool b) { bulk = b; }
 
