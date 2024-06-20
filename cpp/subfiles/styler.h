@@ -1,14 +1,20 @@
 #ifndef SCRIV_CSS
 #define SCRIV_CSS
+#ifndef CONVERTER_DEPENDENCIES
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cctype> // these were used in the trim example on stackoverflow
+#include <locale> // these were used in the trim example on stackoverflow
 #include <iterator>
 #include <regex>
 #include <chrono>
+#include <cstdlib>
+#endif
 #include <filesystem>
 
 using namespace std;

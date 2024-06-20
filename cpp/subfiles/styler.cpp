@@ -1,3 +1,4 @@
+#ifndef CONVERTER_DEPENDENCIES
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -11,6 +12,7 @@
 #include <regex>
 #include <chrono>
 #include <cstdlib>
+#endif
 #include "./styler.h"
 
 using namespace std;

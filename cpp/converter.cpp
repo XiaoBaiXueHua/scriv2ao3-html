@@ -1,13 +1,21 @@
+#ifndef CONVERTER_DEPENDENCIES
+#define CONVERTER_DEPENDENCIES
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cctype> // these were used in the trim example on stackoverflow
+#include <locale> // these were used in the trim example on stackoverflow
 #include <iterator>
 #include <regex>
+#include <chrono>
+#include <cstdlib>
 // #include <chrono>
 // #include <ctime>
+#endif // end of CONVERTER_DEPENDENCIES
 #include <filesystem>
 #include "subfiles/styler.h"
 #include "subfiles/styler.cpp"
