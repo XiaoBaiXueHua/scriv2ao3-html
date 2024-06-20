@@ -28,8 +28,8 @@ public:
 	// functions for externally making rules
 	void ruleInit(vector<string>);
 	void ruleInit(fstream &);
-	void valInit(vector<string>); 
-	void valInit(fstream &);
+	void valInit(vector<string>);
+	void valInit(fstream &); 
 
 	regex toRegEx(string);
 	// regex toRegEx(string &);
@@ -66,7 +66,7 @@ public:
 	void templace(string, string);
 	void templace(string&, string, string);
 
-	void executor(); // executes all the actions based on the filename provided by the string
+	virtual void executor(); // executes all the actions based on the filename provided by the string; the "virtual" makes it overridable in child classes
 
 	static void open(fstream &, string, bool); // function for automatically making files n optionally appending text to them
 	

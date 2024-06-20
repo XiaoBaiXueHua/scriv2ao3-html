@@ -54,22 +54,23 @@ int main()
 			 << endl;
 		std::cout << "Please choose an option: ";
 		cin >> opt;
+		// test to make sure what was input was actually a fucking number
 		if (opt == 2) {
 			scriv.setBatch(true);
 			// std::cout << "Please enter the name of the folder you would like to convert: ";
 			// std::cin >> dir;
 			// const filesystem::path fol{dir};
 			cout << "setting fol to \"html/cazzo\"" << endl;
-			const filesystem::path fol({"html\\cazzo"});
+			const filesystem::path fol({"html"});
 			std::cout << "The files available: " << endl;
 			int numFiles{0};
-			vector<filesystem::path> files = {};
-			for (auto const& dir_entry : filesystem::directory_iterator{fol}) {
-				files.push_back(dir_entry.path());
+			vector<filesystem::path> files = {}, dirs = {};
+			for (auto const& dir_entry : filesystem::recursive_directory_iterator{fol}) {
+				dir_entry.is_directory() ? dirs.push_back(dir_entry.path()) : files.push_back(dir_entry.path());
 				numFiles++;
-				std::cout << setw(15) << numFiles << ". " << dir_entry.path() << endl;
+				std::cout << setw(15) << numFiles << ". " << dir_entry.path() << ", is directory? " << dir_entry.is_directory() << endl;
 			}
-			cout << "Would you like to:\n\t1. Convert each of these files into their own separate, cleaned files?\n\t2. Merge each of these files into one cleaned html file?" << endl;
+			cout << "Would you like to:\n\t1. Convert each of these files into their own separate, cleaned files?\n\t2. Merge each of these files into one cleaned html file?\n\t3. Exit the program?" << endl;
 			cin >> opt;
 			if (opt == 2) {
 				vector<int> order = {};
@@ -94,8 +95,10 @@ int main()
 					scriv.executor();
 					// cout << "file to be cleaned: " << file << endl;
 				}
+			} else if (opt == 3) {
+				exit(0);
 			}
-			break;
+			// break;
 		} else {
 			scriv.setBatch(false);
 			scriv.inputName(); // better to just have this outside the execution tbh

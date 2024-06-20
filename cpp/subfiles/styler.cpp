@@ -23,7 +23,7 @@ regex sClean::toRegEx(string str)
 	vector<string> rpls{"\\(", "\\)", "\\{", "\\}"};
 	for (string ch : rpls)
 	{
-		str = regex_replace(str, regex(ch), "\\\\" + ch);
+		str = regex_replace(str, regex(ch), "\\" + ch);
 	}
 	loggy("the regular expression: " + str);
 	cout << "the regular expression: " << str << endl;
@@ -174,13 +174,6 @@ void sClean::sanitize()
 
 void sClean::nester()
 {
-	// remove this one from the loop as well so that it can be used in unminify as well
-	// while (getline(raw, temp))
-	// {
-	// loggy(temp);
-	// templace("<p>", "<p>\n"); // new line for each paragraph
-	// templace("</p>", "\n</p>");
-	// templace("</p>", "</p>\n");
 	templace("<p>\\s+</p>", "<p>&nbsp;</p>");
 	unnest("blockquote");
 	// unnest("pre"); // for when i eventually figure out how to get it to do <code> and <pre>
@@ -203,13 +196,8 @@ void sClean::unnest(string elm)
 {
 	templace("</" + elm + "><" + elm + ">"); // maybe add "(\\s?(\\w|\\d|-))*" to the regex to check for classes n whatnot -- actually "(\s?(\w|\d|=|\"|-)+)*" should probs be the regex
 }
-// void sClean::unnest(string elm, bool nl)
-// {
-// 	// string clean{"</"+elm+"><"+elm+">"};
-// 	templace("</" + elm + "><" + elm + ">", (nl ? "\n" : ""));
-// }
 
-// surely doing things like this will not go wrong at all
+// surely doing things like this will not go wrong at all. first version has the string, the expression, and the replacement
 void sClean::templace(string &str, string exp, string rep)
 {
 	// regex r(R"("+exp)");
@@ -218,10 +206,12 @@ void sClean::templace(string &str, string exp, string rep)
 		str = regex_replace(str, regex(exp), rep);
 	}
 }
+// second version has the expression and replacement, using the private var temp as the string in question
 void sClean::templace(string exp, string rep)
 {
 	templace(temp, exp, rep);
 }
+// third version just replaces the expression fed in with nothing, again using temp as the default string
 void sClean::templace(string exp)
 {
 	templace(exp, "");
@@ -231,7 +221,8 @@ void sClean::inputName()
 {
 	string filename{""};
 	cout << "Choose the name of the html file to open: ";
-	cin >> filename;
+	// cin >> filename;
+	getline(cin >> ws, filename); // this should allow for spaces in the filename
 	fname = filename;
 	tmpname = filename + "_tmp";
 	// setName(filename);
@@ -241,11 +232,6 @@ void sClean::setBatch(bool b) { bulk = b; }
 void sClean::setiPath(string str) { fipath = str + "/"; } // will also automatically add in the /
 void sClean::setoPath(string str) { fopath = str + "/"; }
 void sClean::setFullPath(string str) { fullPath = str; }
-// void sClean::setName(string str)
-// {
-// 	fname = str;
-// 	tmpname = str + "_tmp";
-// } // the name should only really be used once
 void sClean::setType(string str) { ftype = "." + str; } // so in this case, Do Not include the period
 
 // functions for redirecting the stream to other files
