@@ -57,7 +57,7 @@ int main()
 			// std::cout << "Please enter the name of the folder you would like to convert: ";
 			// std::cin >> dir;
 			// const filesystem::path fol{dir};
-			cout << "setting fol to \"html/cazzo\"" << endl;
+			// cout << "setting fol to \"html/cazzo\"" << endl;
 			const filesystem::path fol({"html"});
 			std::cout << "The files available: \nIn the root " << fol << " folder: " << endl;
 			int numFiles{0};
