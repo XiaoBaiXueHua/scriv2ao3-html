@@ -1,0 +1,6 @@
+- okay, so. we need a function that'll show all the html files and directories in a folder, and then the user can either pick A File, or navigate to A Directory 
+	- "Convert these files, or navigate to sub-directory" sort of thing
+	- i think at this point, it's probably also a good idea to have the user specify whether they're looking to convert in a batch or just a single file from the start. like that was a good idea the first time; let's do that
+- anyway, in batch mode, you can either choose to convert all the files shown (return current directory), or navigate to a different directory, which will then do the same thing of showing you all the files n directories in that folder 
+	- give them the option to either convert all of them to separate files, or into one conglomerate file 
+		- if they want one conglomerate file, then also give them the option to pick the order they'll be converted in

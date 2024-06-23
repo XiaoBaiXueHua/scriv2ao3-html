@@ -20,47 +20,47 @@ const filesystem::path fol({"html"});
 vector<filesystem::directory_entry> entries = {}; // want this to be of directory entries so that we can check if it's a directory later
 sClean scriv;
 void showEntries(filesystem::path);
-filesystem::directory_entry explorer(filesystem::directory_entry c)
-{
-	if (c.is_directory() && !batch)
-	{
-		cout << "In " << c.path().filename() << ", we have:\n";
-		showEntries(c.path());
-		cout << "Would you like to:\n\t1. Convert only among the HTML files shown\n\t2. Check out a subfolder\n\t3. Convert from everything\n\t> ";
-		int opt{0};
-		cin >> opt;
-		switch (opt)
-		{
-		case 1:
-		{
-			cout << "Well, pick one, then: ";
-			cin >> convertOpt;
-			c = entries[convertOpt - 1];
-			break;
-		}
-		case 2:
-		{
-			cout << "Well, pick one, then: ";
-			cin >> convertOpt;
-			c = entries[convertOpt - 1];
-			batch = true;
-			break;
-		}
-		case 3:
-		{
-			break; // leaves c alone
-		}
-		default:
-		{
-			cout << "Not an option, bucko." << endl;
-		}
-		}
-	} else {
-		return c;
-	}
+// filesystem::directory_entry explorer(filesystem::directory_entry c)
+// {
+// 	if (c.is_directory() && !batch)
+// 	{
+// 		cout << "In " << c.path().filename() << ", we have:\n";
+// 		showEntries(c.path());
+// 		cout << "Would you like to:\n\t1. Convert only among the HTML files shown\n\t2. Check out a subfolder\n\t3. Convert from everything\n\t> ";
+// 		int opt{0};
+// 		cin >> opt;
+// 		switch (opt)
+// 		{
+// 		case 1:
+// 		{
+// 			cout << "Well, pick one, then: ";
+// 			cin >> convertOpt;
+// 			c = entries[convertOpt - 1];
+// 			break;
+// 		}
+// 		case 2:
+// 		{
+// 			cout << "Well, pick one, then: ";
+// 			cin >> convertOpt;
+// 			c = entries[convertOpt - 1];
+// 			batch = true;
+// 			break;
+// 		}
+// 		case 3:
+// 		{
+// 			break; // leaves c alone
+// 		}
+// 		default:
+// 		{
+// 			cout << "Not an option, bucko." << endl;
+// 		}
+// 		}
+// 	} else {
+// 		return c;
+// 	}
 
-	return explorer(c);
-};
+// 	return c;
+// };
 int main()
 {
 
@@ -72,11 +72,11 @@ int main()
 	{
 		project::center(25, "~~~ Files & Directories Available for Conversion ~~~");
 		showEntries(fol);
-		filesystem::directory_entry chosen{explorer(entries[convertOpt - 1])};
-		if (chosen.is_directory())
-		{
-			// bc explorer can return either a single file or a folder, we still have to check this
-		}
+		// filesystem::directory_entry chosen{explorer(entries[convertOpt - 1])};
+		// if (chosen.is_directory())
+		// {
+		// 	// bc explorer can return either a single file or a folder, we still have to check this
+		// }
 	}
 	else
 	{
