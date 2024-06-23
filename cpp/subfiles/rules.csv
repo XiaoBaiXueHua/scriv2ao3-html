@@ -1,1 +1,3 @@
-text-align,margin-left,text-decoration
+text-align,margin-left,text-decoration,text-decoration
+\\w+,\\d.\\d+,underline,through
+,blockquote,ins,del
