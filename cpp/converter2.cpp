@@ -36,11 +36,10 @@ void showOpts()
 void explorer()
 {
 	int dirNav{0};
-	while (convertOpt == dirOpt)
+	while (cin.good())
 	{
-		if (cin.good())
+		if (convertOpt == dirOpt)
 		{
-
 			cout << "Choose the directory to navigate to: ";
 			cin >> dirNav;
 			if (cin.good() && (dirNav < entries.size() || dirNav > 0))
@@ -49,17 +48,18 @@ void explorer()
 			}
 			showEntries(currPath);
 			showOpts();
+			cin >> convertOpt;
 		}
 		else
 		{
-			if (cin.bad())
-			{
-				cin.clear();			 // clear the error flag
-				cin.ignore(10000, '\n'); // and then ignore the everything
-			}
-			cout << "Um. Try that again. ";
+			// if (cin.bad())
+			// {
+			// 	cin.clear();			 // clear the error flag
+			// 	cin.ignore(10000, '\n'); // and then ignore the everything
+			// }
+			// cout << "Um. Try that again. ";
+			break;
 		}
-		cin >> convertOpt;
 	};
 }
 
@@ -114,18 +114,25 @@ void showEntries(filesystem::path p)
 	numFiles = 0;
 	hasDirectory = false;
 	cout << endl; // add in an extra gap line for readability
-	for (auto const &dir_entry : filesystem::directory_iterator{p}) // list out the available options
+	if (!p.empty())
 	{
-		filesystem::path currPath{dir_entry.path()};
-		if (dir_entry.is_directory() || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
+		for (auto const &dir_entry : filesystem::directory_iterator{p}) // list out the available options
 		{
-			if (dir_entry.is_directory())
+			filesystem::path currPath{dir_entry.path()};
+			if (dir_entry.is_directory() || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
 			{
-				hasDirectory = true;
+				if (dir_entry.is_directory())
+				{
+					hasDirectory = true;
+				}
+				entries.push_back(dir_entry);
+				numFiles++;
+				cout << setw(15) << numFiles << ". " << currPath.filename() << (dir_entry.is_directory() ? " (directory)" : "") << endl;
 			}
-			entries.push_back(dir_entry);
-			numFiles++;
-			cout << setw(15) << numFiles << ". " << currPath.filename() << (dir_entry.is_directory() ? " (directory)" : "") << endl;
 		}
+	}
+	else
+	{
+		cout << "Hey!! This thing's empty!!!!!!!!!!!!" << endl;
 	}
 }
