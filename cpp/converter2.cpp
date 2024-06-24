@@ -15,20 +15,40 @@ using namespace std;
 
 // global vars and stuff
 int dirOpt{4}, convertOpt{dirOpt}, numFiles{0};
-bool batch{false};
+bool batch{false}, hasDirectory{false}, recurve{false};
 const filesystem::path fol({"html"});
 filesystem::path currPath({fol});				  // initialize to just be the html folder
 vector<filesystem::directory_entry> entries = {}; // want this to be of directory entries so that we can check if it's a directory later
 sClean scriv;
 void showEntries(filesystem::path);
+void showOpts()
+{
+	project::center(50, "~~~ Options ~~~ ");
+	cout << "\t1. Convert all files (but not sub-folders)." << endl;
+	cout << "\t2. Convert all files and sub-folder files." << endl;
+	cout << "\t3. Convert only some of the files shown." << endl;
+	if (hasDirectory)
+	{
+		cout << "\t4. Look through one of the sub-folders listed." << endl;
+	}
+	cout << "\t> ";
+}
 void explorer()
 {
-	do
+	int dirNav{0};
+	while (convertOpt == dirOpt)
 	{
-		if (cin.good() && convertOpt > 0 && convertOpt < 5)
+		if (cin.good())
 		{
+
+			cout << "Choose the directory to navigate to: ";
+			cin >> dirNav;
+			if (cin.good() && (dirNav < entries.size() || dirNav > 0))
+			{
+				currPath = entries[dirNav - 1];
+			}
 			showEntries(currPath);
-			project::center(50, "~~~ Options ~~~ ");
+			showOpts();
 		}
 		else
 		{
@@ -38,26 +58,47 @@ void explorer()
 				cin.ignore(10000, '\n'); // and then ignore the everything
 			}
 			cout << "Um. Try that again. ";
-			cin >> convertOpt;
 		}
-	} while (convertOpt == dirOpt);
+		cin >> convertOpt;
+	};
 }
+
 int main()
 {
 
 	project::title("      HTML Sanitizer      ");
-
-	// project::center(50, "~~~ Options ~~~");
-	// const filesystem::path fol({"html"});
 	if (!fol.empty())
 	{
 		project::center(25, "~~~ Files & Directories Available for Conversion ~~~");
 		showEntries(fol);
-		// filesystem::directory_entry chosen{explorer(entries[convertOpt - 1])};
-		// if (chosen.is_directory())
-		// {
-		// 	// bc explorer can return either a single file or a folder, we still have to check this
-		// }
+		showOpts();
+		cin >> convertOpt;
+		if (cin.good())
+		{
+			explorer();
+			switch (convertOpt)
+			{
+			case 1:
+			{ // convert all files but not sub-folders
+				break;
+			}
+			case 2:
+			{ // convert all files and subfolders
+				recurve = true;
+				break;
+			}
+			case 3:
+			{ // convert only some of the files shown
+				cout << "Choose the files to be converted: ";
+				// probably write a function for this
+				break;
+			}
+			}
+		}
+		else
+		{
+			cout << "Um. You typed something wrong." << endl;
+		}
 	}
 	else
 	{
@@ -69,19 +110,22 @@ int main()
 
 void showEntries(filesystem::path p)
 {
-	entries = {}; // reset this each time
+	entries = {}; // reset these each time
 	numFiles = 0;
+	hasDirectory = false;
+	cout << endl; // add in an extra gap line for readability
 	for (auto const &dir_entry : filesystem::directory_iterator{p}) // list out the available options
 	{
 		filesystem::path currPath{dir_entry.path()};
 		if (dir_entry.is_directory() || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
 		{
+			if (dir_entry.is_directory())
+			{
+				hasDirectory = true;
+			}
 			entries.push_back(dir_entry);
 			numFiles++;
 			cout << setw(15) << numFiles << ". " << currPath.filename() << (dir_entry.is_directory() ? " (directory)" : "") << endl;
 		}
 	}
-	// filesystem::directory_entry chosen{entries[convertOpt - 1]}; // has to be -1 bc the numbers are listed out + 1
-
-	// explorer(chosen);
 }
