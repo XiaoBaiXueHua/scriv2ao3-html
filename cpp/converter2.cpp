@@ -36,31 +36,48 @@ void showOpts()
 void explorer()
 {
 	int dirNav{0};
-	while (cin.good())
+	bool chosenOpt{false};
+	while (!chosenOpt)
 	{
-		if (convertOpt == dirOpt)
+		if (cin.good())
 		{
-			cout << "Choose the directory to navigate to: ";
-			cin >> dirNav;
-			if (cin.good() && (dirNav < entries.size() || dirNav > 0))
+			if (convertOpt == dirOpt)
 			{
-				currPath = entries[dirNav - 1];
+				cout << "Choose the directory to navigate to: ";
+				cin >> dirNav;
+				if (cin.good() && (dirNav < entries.size() || dirNav > 0))
+				{
+					currPath = entries[dirNav - 1];
+				}
+				showEntries(currPath);
+				showOpts();
+				// cin >> convertOpt;
 			}
-			showEntries(currPath);
-			showOpts();
-			cin >> convertOpt;
+			else
+			{
+				chosenOpt = true;
+				// if (cin.bad())
+				// {
+				// 	cin.clear();			 // clear the error flag
+				// 	cin.ignore(10000, '\n'); // and then ignore the everything
+				// }
+				// cout << "Um. Try that again. ";
+				break;
+			}
 		}
 		else
-		{
-			// if (cin.bad())
-			// {
-			// 	cin.clear();			 // clear the error flag
-			// 	cin.ignore(10000, '\n'); // and then ignore the everything
-			// }
-			// cout << "Um. Try that again. ";
-			break;
+		{							 // if the input is NOT good
+			cin.clear();			 // clear error flag
+			cin.ignore(10000, '\n'); // ignore the everything
+			cout << "Um. You mistyped something. Try that again: ";
+			// explorer(); // keep doing it until it's good
 		}
+		cin >> convertOpt;
 	};
+	// if (!cin.good())
+	// {
+
+	// }
 }
 
 int main()
@@ -73,32 +90,34 @@ int main()
 		showEntries(fol);
 		showOpts();
 		cin >> convertOpt;
-		if (cin.good())
+		explorer();
+		cout << "Would you like to consolidate all these files to a single output? \n\t1. Yes\n\t2. No\n\t> ";
+		switch (convertOpt)
 		{
-			explorer();
-			switch (convertOpt)
-			{
-			case 1:
-			{ // convert all files but not sub-folders
-				break;
-			}
-			case 2:
-			{ // convert all files and subfolders
-				recurve = true;
-				break;
-			}
-			case 3:
-			{ // convert only some of the files shown
-				cout << "Choose the files to be converted: ";
-				// probably write a function for this
-				break;
-			}
-			}
+		case 1:
+		{ // convert all files but not sub-folders
+			break;
 		}
-		else
-		{
-			cout << "Um. You typed something wrong." << endl;
+		case 2:
+		{ // convert all files and subfolders
+			recurve = true;
+			break;
 		}
+		case 3:
+		{ // convert only some of the files shown
+			cout << "Choose the files to be converted: ";
+			// probably write a function for this
+			break;
+		}
+		}
+		// if (cin.good())
+		// {
+
+		// }
+		// else
+		// {
+		// 	cout << "Um. You typed something wrong." << endl;
+		// }
 	}
 	else
 	{
