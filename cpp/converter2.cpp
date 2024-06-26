@@ -56,12 +56,6 @@ void explorer()
 			else
 			{
 				chosenOpt = true;
-				// if (cin.bad())
-				// {
-				// 	cin.clear();			 // clear the error flag
-				// 	cin.ignore(10000, '\n'); // and then ignore the everything
-				// }
-				// cout << "Um. Try that again. ";
 				break;
 			}
 		}
@@ -74,10 +68,6 @@ void explorer()
 		}
 		cin >> convertOpt;
 	};
-	// if (!cin.good())
-	// {
-
-	// }
 }
 
 int main()
@@ -110,14 +100,6 @@ int main()
 			break;
 		}
 		}
-		// if (cin.good())
-		// {
-
-		// }
-		// else
-		// {
-		// 	cout << "Um. You typed something wrong." << endl;
-		// }
 	}
 	else
 	{
