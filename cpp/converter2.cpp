@@ -15,7 +15,7 @@ using namespace std;
 
 // global vars and stuff
 int dirOpt{4}, convertOpt{dirOpt}, numFiles{0};
-bool batch{false}, hasDirectory{false}, recurve{false};
+bool batch{false}, hasDirectory{false}, chosenOpt{false};
 const filesystem::path fol({"html"});
 filesystem::path currPath({fol});				  // initialize to just be the html folder
 vector<filesystem::directory_entry> entries = {}; // want this to be of directory entries so that we can check if it's a directory later
@@ -33,10 +33,15 @@ void showOpts()
 	}
 	cout << "\t> ";
 }
+void typo()
+{
+	cin.clear();			 // clear error flag
+	cin.ignore(10000, '\n'); // ignore the everything
+	cout << "Um. You mistyped something. Try that again: ";
+}
 void explorer()
 {
 	int dirNav{0};
-	bool chosenOpt{false};
 	while (!chosenOpt)
 	{
 		if (cin.good())
@@ -55,16 +60,13 @@ void explorer()
 			}
 			else
 			{
-				chosenOpt = true;
+				// chosenOpt = true;
 				break;
 			}
 		}
 		else
 		{							 // if the input is NOT good
-			cin.clear();			 // clear error flag
-			cin.ignore(10000, '\n'); // ignore the everything
-			cout << "Um. You mistyped something. Try that again: ";
-			// explorer(); // keep doing it until it's good
+			typo();
 		}
 		cin >> convertOpt;
 	};
@@ -72,33 +74,100 @@ void explorer()
 
 int main()
 {
-
+	vector<filesystem::directory_entry> selectedFiles;
 	project::title("      HTML Sanitizer      ");
 	if (!fol.empty())
 	{
+		int miscChoices{0};
 		project::center(25, "~~~ Files & Directories Available for Conversion ~~~");
 		showEntries(fol);
 		showOpts();
 		cin >> convertOpt;
 		explorer();
-		cout << "Would you like to consolidate all these files to a single output? \n\t1. Yes\n\t2. No\n\t> ";
+
 		switch (convertOpt)
 		{
 		case 1:
 		{ // convert all files but not sub-folders
+			for (auto const &dir_entry : entries)
+			{
+				if (!dir_entry.is_directory())
+				{
+
+					selectedFiles.push_back(dir_entry);
+				}
+			}
 			break;
 		}
 		case 2:
 		{ // convert all files and subfolders
-			recurve = true;
+			// recurve = true;
+			for (auto const &dir_entry : entries)
+			{
+				if (dir_entry.is_directory())
+				{
+					for (auto const &sub_entry : filesystem::recursive_directory_iterator{dir_entry})
+					{
+						selectedFiles.push_back(sub_entry);
+					}
+				}
+				else
+				{
+					selectedFiles.push_back(dir_entry);
+				}
+			}
 			break;
 		}
 		case 3:
 		{ // convert only some of the files shown
-			cout << "Choose the files to be converted: ";
+			cout << "(Entering selection loop. Enter -1 to exit.)" << endl;
+			cout << "Choose the files to be converted:\n\t> ";
+			cin >> miscChoices;
 			// probably write a function for this
+			while ((!chosenOpt && (selectedFiles.size() < entries.size()) || miscChoices == -1))
+			{
+				if (cin.good())
+				{
+					if (miscChoices == -1) {
+						break; // exit upon entering -1
+					}
+					selectedFiles.push_back(entries[miscChoices-1]);
+					cout << "Added " << entries[miscChoices-1] << ".";
+					cout << "\n\t> ";
+				}
+				else 
+				{
+					typo();
+				}
+				cin >> miscChoices;
+			}
 			break;
 		}
+		}
+		miscChoices = 0; // reset this
+		cout << "Would you like to consolidate all these files to a single output? \n\t1. Yes\n\t2. No\n\t> ";
+		bool consolidate{false};
+		cin >> miscChoices;
+		while (!chosenOpt)
+		{ // chosenOpt has now officially become the boolean i use for my misc while loops to ensure that the inputs are good
+			if (cin.good())
+			{
+				if (miscChoices == 1 || miscChoices == 2)
+				{
+					consolidate = (miscChoices == 1);
+					break;
+				}
+				else
+				{
+					cout << "That's not an option. Do it again: ";
+				}
+			}
+			else
+			{
+				// cout << "TYPOOOOOOOOOOOO. pls retype: ";
+				typo();
+			}
+			cin >> miscChoices;
 		}
 	}
 	else
