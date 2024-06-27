@@ -169,6 +169,15 @@ int main()
 			}
 			cin >> miscChoices;
 		}
+		for (auto const &dir_entry : selectedFiles) {
+			// now we convert them one by one
+			const filesystem::path currPath{dir_entry.path()};
+			scriv.setBatch(consolidate);
+			scriv.setName(currPath.stem().string());
+			// scriv.setFullPath(currPath.string());
+			cout << "Now cleaning: " << currPath << "." << endl;
+			scriv.executor();
+		}
 	}
 	else
 	{

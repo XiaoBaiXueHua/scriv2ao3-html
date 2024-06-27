@@ -268,6 +268,7 @@ void sClean::setClean(string path)
 string sClean::getFullPath(bool instream) // true means it's the input path
 {										  // just to quickly concatenate that
 	if (!bulk || !instream) // if it's not bulk, then it gets to eval the whole thing (correct)
+	// if (!instream)
 	{
 		// string fpath = instream ? fipath : fopath;
 		// return fpath + fname + ftype;
