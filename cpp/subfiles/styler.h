@@ -32,9 +32,9 @@ public:
 		delete strPt;
 	};
 	// functions for externally making rules
-	void ruleInit(vector<string>);
+	// void ruleInit(vector<string>);
 	void ruleInit(fstream &);
-	void valInit(vector<string>);
+	// void valInit(vector<string>);
 	void valInit(fstream &); 
 
 	regex toRegEx(string);
@@ -53,6 +53,7 @@ public:
 	void inputName(), setName(string);
 	void setBatch(bool);
 	void setiPath(string), setoPath(string), setFullPath(string), setType(string); //set the current path, name, n type of file being worked with
+	void setFile(filesystem::directory_entry);
 	void setRaw(string), setClean(string);
 	// fstream getRaw(), getClean();
 	string getFullPath(bool), getTmpPath();
@@ -87,7 +88,7 @@ private:
 	int numLines{1}, bodLine{1}; //this really probably does not need to be private... maybe static though!
 	bool foundEl{false}, styleSw{false}, bodySw{false}, tmpEl{false}, bulk{false}; //generic switch that flips around depending on whether we've found our currently searched-for el, and then perm switches for style n body
 	string fname{""}, tmpname{""}, fipath{""}, fopath{""}, ftype{""}, fullPath{""}; //filepath n filename
-	filesystem::path path{""};
+	filesystem::directory_entry currFile;
 	string temp{""}, el{""}; //i suspect i will probably want somewhere to temporarily hold strings when tossing them around
 	// string quot{char(34)}, lt{char(60)}, gt{char(62)}, amp{char(38)}; //need this for, like. man idk why the regex doesn't take it as it is.
 	fstream raw, cleaned; //the two streams for the input/output

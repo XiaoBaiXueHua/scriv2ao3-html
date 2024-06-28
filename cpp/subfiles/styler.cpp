@@ -253,6 +253,9 @@ void sClean::redirStream(fstream &stm, string path, bool clear = false)
 	sClean::open(stm, path, false); // and then do the standard opening procedure
 									// loggy("the path has been directed to "+path);
 }
+void sClean::setFile(filesystem::directory_entry f) {
+	currFile = f;
+}
 void sClean::setRaw(string path)
 {
 	loggy("the raw stream path has been set to: " + path);
