@@ -23,6 +23,7 @@ sClean scriv;
 void showEntries(filesystem::path);
 void showOpts()
 {
+	cout << endl; // extra line for cleanliness
 	project::center(50, "~~~ Options ~~~ ");
 	std::cout << "\t1. Convert all files (but not sub-folders)." << endl;
 	std::cout << "\t2. Convert all files and sub-folder files." << endl;
@@ -76,7 +77,6 @@ int main()
 {
 	vector<filesystem::directory_entry> selectedFiles;
 	project::title("      HTML Sanitizer      ");
-	std::cout << endl; // extra line for cleanliness
 	if (!fol.empty())
 	{
 		int miscChoices{0};
@@ -184,7 +184,7 @@ int main()
 	{
 		std::cout << "Uh oh! There seems to be nothing in the " << fol << " folder. Twagic. We are hard-coded to only look for files in there.";
 	}
-	std::cout << "\nOkieee bye-bye ^w^";
+	std::cout << "\nOkieee bye-bye~ ^w^";
 	return 0;
 }
 

@@ -5,13 +5,13 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <algorithm>
+// #include <algorithm>
 #include <cctype> // these were used in the trim example on stackoverflow
 #include <locale> // these were used in the trim example on stackoverflow
-#include <iterator>
+// #include <iterator>
 #include <regex>
 #include <chrono>
-#include <cstdlib>
+// #include <cstdlib>
 #endif
 #include "./styler.h"
 
