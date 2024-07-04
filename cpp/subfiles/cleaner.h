@@ -29,8 +29,17 @@ public:
 		cout << "The maze navigation looks like: " << endl;
 		for (auto const &entry : fileMaze)
 		{
-			cout << entry  << " / ";
+			cout << entry << " / ";
 		}
+	}
+	string currentPath()
+	{ // returns the maze up to the current folder
+		string tmp{""};
+		for (auto const &entry : fileMaze)
+		{
+			tmp += entry + " / ";
+		}
+		return tmp;
 	}
 	void explorer()
 	{
@@ -55,9 +64,12 @@ public:
 						{
 							cout << "Well, now you're SUPPOSED to be going back up a file." << endl;
 							fileMaze.pop_back(); // otherwise remove the current directory from the file maze
-							try {
+							try
+							{
 								currFile = filesystem::directory_entry{currFile.path().parent_path()};
-							} catch (exception) {
+							}
+							catch (exception)
+							{
 								cout << "Yeah whatever just got tried for navigating up in the file path didn't work. but rest assured that the filemaze got correctly done or something." << endl;
 							}
 						}
@@ -66,9 +78,12 @@ public:
 				}
 				else
 				{
-					if (convertOpt > 0 && convertOpt < 4) {
+					if (convertOpt > 0 && convertOpt < 4)
+					{
 						break;
-					} else {
+					}
+					else
+					{
 						cout << "Ummmm that's not an option ://////\nTry again: ";
 					}
 				}
