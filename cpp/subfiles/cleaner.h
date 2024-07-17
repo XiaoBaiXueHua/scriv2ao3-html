@@ -41,6 +41,22 @@ public:
 		}
 		return tmp;
 	}
+	void makeDir() { // basically, if the sub-directory doesn't exist in the output folder, make it
+		string tmp{"output"}; // hardcode for just output for now
+		if (!filesystem::directory_entry(tmp).exists()) {
+			filesystem::create_directory(tmp);
+		}
+		for (auto const &ent : fileMaze) {
+			tmp += "/" + ent;
+			filesystem::directory_entry tmpEntry{tmp};
+			if (!tmpEntry.exists()) {
+				filesystem::create_directory(tmp + "/");
+				cout << "Now creating directory: " << tmp << endl;
+			}
+			// tmp += "/";
+			// filesystem::directory_entry entry{tmp}; // uhhhh see if it exists or smth?
+		}
+	}
 	void explorer()
 	{
 		int convertOpt{0}, dirNav{0};

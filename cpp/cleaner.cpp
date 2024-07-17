@@ -11,5 +11,6 @@ int main() {
 	scriv.showEntries();
 	scriv.explorer();
 	scriv.showMaze();
+	scriv.makeDir();
 	return 0;
 }
