@@ -125,7 +125,7 @@ void cleaner()
 	vector<sanitize> linear;
 	float medianFontSize{1.00};
 	// vector<string> cssRules{};
-	raw.open(entries[1].path());
+	raw.open(entries[2].path());
 	cleaned.open("output/yoink.html");
 	// cleaned.open("output/test.html"); // just the test for now
 	cleaned.clear();
@@ -245,17 +245,18 @@ void cleaner()
 
 				if (block) // so. technically this just means "not an inline"
 				{
-					cout << "not a span or li, right??? " << currentEl << endl;
+					// cout << "not a span or li, right??? " << currentEl << endl;
 
-					pls = sanitize("", cssRule(relevant.el, currentClass, relevant.guts));
-					cout << "new pls: " << pls << endl
-						 << endl;
+					pls = sanitize("", cssRule(relevant.parent, currentClass, relevant.guts));
+					// cout << "new pls: " << pls << endl
+					// 	 << endl;
 				}
 				if (currentEl == "li")
 				{
 					handleLi();
 					tmp += "</li>"; // fuck it. just add itjust add it
 					cout << tmp << endl;
+					pls++;
 					// listSwitch = false;
 				}
 
@@ -349,14 +350,14 @@ void cleaner()
 					cleanLine.swap(whee); // can we just. clear it like that.
 					if (endling)		  // if tmp is empty or we're closing a paragraph
 					{
-						cout << "this is an endling.\n\t" << currentEl << "\t" << currentClass << endl;
+						// cout << "this is an endling.\n\t" << currentEl << "\t" << currentClass << endl;
 						linear.push_back(pls);
 						pls.reset();
 						break;
 					}
 				}
 
-				cout << "new tmp: " << tmp << endl;
+				// cout << "new tmp: " << tmp << endl;
 			}
 		}
 
@@ -379,8 +380,34 @@ void cleaner()
 	cout << "now to go through the lines array. (" << linear.size() << " lines)" << endl;
 	for (int i{0}; i < linear.size(); i++)
 	{
-		// cout << "line " << i << ".\n\t" << linear[i] << endl << endl;
-		cleaned << linear[i] << endl;
+		bool more{i < linear.size() - 1}, hindsight{i > 0};
+		sanitize prev, next, current{linear[i]};
+		if (hindsight) {
+			prev = linear[i - 1];
+		}
+		if (more) {
+			next = linear[i + 1];
+		}
+		if (current.bqtMode) {
+			// so if we're currently in blockquote mode
+			if (!prev.bqtMode) {
+				// default for bqtMode is false, so we don't need to worry abt doing some shit wrong
+				cleaned << current.printParent() << endl;
+			}
+
+		}
+		if (current.length() > 1) {
+			// now we print our tabs
+			cleaned << setfill('\t') << setw(current.length() - 1) << ""; 
+		}
+
+		cleaned << current << endl;
+
+		if (current.bqtMode) {
+			if (!next.bqtMode) {
+				cleaned << current.closeParent() << endl;
+			}
+		}
 	}
 }
 

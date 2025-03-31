@@ -45,13 +45,11 @@ public:
 		int i{0};
 		for (auto s : *(yee))
 		{
-			// cout << "\tsubmatch " << i << ": " << s << endl;
 			tmp2 = s.str(); // hold the string
-
-			// if ((i == 2) || (i == 3) || (i == 5)) {
 			if (i == 2)
 			{
 				el = tmp2;
+				parent = el;
 			}
 			else if (i == 3)
 			{												  // the class
@@ -61,8 +59,6 @@ public:
 			{
 				rulez = tmp2.substr(1, (tmp2.length() - 2)); // cut off the {} from the rules
 			}
-			// cssRules.push_back(tmp2);
-			// }
 			i++;
 		}
 		if (el != "span")
@@ -84,13 +80,10 @@ public:
 			// tmpVec.clear();
 			vector<string> tmpVec{};
 			while (getline(wah, tmp3, ':'))
-			{ //
-				// tmp3 = cssRule::trim(tmp3);
+			{
 				tmp3 = trim(tmp3);
 				tmpVec.push_back(tmp3); // push back a trimmed version
 			}
-			// cout << "tmpVec stuff: " << endl;
-			// cout << "\t" << tmpVec[0] << "\t" << tmpVec[1] << endl;
 			// leave font-weight n font-style alone since scrivener already provides
 			tmp3 = tmpVec[0];
 			if ((tmp3 == "font-size" || tmp3 == "text-decoration" || tmp3 == "text-align" || tmp3 == "margin-left") && el != "body")
@@ -119,9 +112,11 @@ public:
 					misc = stof(tmpVec[1]);
 					if (misc >= 1)
 					{
-						el = "blockquote";
-						guts = "><p" + guts;
+						parent = "blockquote";
+						// el = "blockquote";
+						// guts = "><p" + guts;
 						bqtMode = true;
+						// indent++;
 					}
 				}
 			}
@@ -140,78 +135,171 @@ public:
 		el = e;
 		klass = c;
 		guts = g;
-		if (el == "blockquote") {
+		parent = el;
+		if (el == "blockquote" || el == "ol" || el == "ul")
+		{
+			// parent = el;
+			// indent++;
+		}
+
+		if (el == "blockquote")
+		{
+			el = "p";
 			bqtMode = true;
-		} else if (el == "ol" || el == "ul") {
+		}
+		else if (el == "ol" || el == "ul")
+		{
+			// parent = el;
+			el = "li";
 			listMode = true;
 		}
 	}
 
-	static string trim(string str)
-	{
-		return string(regex_replace(regex_replace(str, regex("^\\s*"), ""), regex("\\s*$"), ""));
-	}
 
 	string printTag() { return "<" + el + guts + ">"; }
-	string printClose() { return ((string(bqtMode ? "</p>" : "")) + "</" + el + ">"); }
+	string printClose() { return "</" + el + ">"; }
+	string printParent() { return "<" + parent + ">"; }
+	string closeParent() { return "</" + parent + ">"; }
+
+	// the only thing we should be increasing/decreasing is the indent so like y'know
+	// cssRule &operator++()
+	// {
+	// 	indent++;
+	// 	return *this;
+	// }
+	// cssRule &operator--()
+	// {
+	// 	indent--;
+	// 	return *this;
+	// }
 
 	// fuck it. everyone's public
-	string el{""}, klass{""}, rulez{""}, display{"inline"}, guts{""};
+
+	string el{""}, klass{""}, rulez{""}, display{"inline"}, guts{""}, parent{""}; // "parent" is used for things like blockquotes n lists, which have important nesting happening
+
 	bool bqtMode{false}, listMode{false}, fsSpecified{false}, worthwhile{false}; // booleans for when we're working w/blockquotes n stuff
 
 	float fontSize{0.0}; // measured in rems
 
 private:
+	// int indent{0};
 };
 
-class sanitize
+class sanitize : public cssRule
 {
 public:
 	sanitize() {};
-	sanitize(string s, cssRule r)
+	sanitize(string s, cssRule r) : cssRule(r)
 	{
-		init(s, r);
+		init(s);
 	}
-	sanitize(stringstream &s, cssRule r)
+	sanitize(stringstream &s, cssRule r) : cssRule(r)
 	{
-		init(s.str(), r);
+		init(s.str());
 	}
-	sanitize(istringstream &s, cssRule r)
+	sanitize(istringstream &s, cssRule r) : cssRule(r)
 	{
-		init(s.str(), r);
+		init(s.str());
 	}
 
-	void init(string s, cssRule r) {
-		rule = r;
-		// elaborate on this later, but for now just hr elements
-		if (s == "~***~") {
-			hr = true; 
-		} else {
+	void init(string s)
+	{
+		if (parent == "blockquote") {
+			indent = 1;
+		}
+		if (s == "~***~")
+		{
+			hr = true;
+		}
+		else
+		{
 			innerHTML = s;
 		}
 	}
-	string cleanup() {
-		return (((innerHTML != "") || regex_search(innerHTML, regex("^\\s+$"))) ? innerHTML : "&nbsp;"); // for now just empty spaces
+
+	string cleanup()
+	{
+		string tmp = innerHTML; // leave the actual inner html untouched
+		if (hr)
+		{
+			tmp = "<hr />";
+		}
+		else if ((tmp == "") || regex_search(tmp, regex("^(<(em|strong)>)*(\\s+|<br\\s?/>)(</(em|strong)>)*$")))
+		{
+			// so if it's an empty string or just spaces
+			tmp = "&nbsp;"; // replace it with this nbsp
+		}
+		else if (regex_search(tmp, regex("&#\\d+;")))
+		{
+			// loop through and cleanup any sort of &#numbers; html code things
+
+			// cout << "now to replace the fucking &#\\d+; things in the line, \"" << tmp << "\"" << endl;
+			// string subTmp = tmp; // hold this
+			// tmp = ""; // clear this out
+			regex aiya{"(&#(\\d+);)(.)?"}; // this reults in 0 = full thing, 1 = just the numbers, and then 2 = whatever comes after
+			while (regex_search(tmp, regex("&#\\d+;")))
+			{
+				sregex_iterator oi{tmp.begin(), tmp.end(), aiya};
+				regex rpls(string((*oi)[1].str())); // should be the full thing
+				int num{stoi(string((*oi)[2].str()))};
+				string m{char(num)};
+				if (num == 60 && string((*oi)[1].str()) == "3")
+				{
+					// if it's a gt sign & followed by a 3
+					m = "&gt;"; // make it a gt instead
+				}
+				tmp = regex_replace(tmp, rpls, m);
+			}
+		}
+		return tmp; // for now just empty spaces
 	}
 
 	friend ostream &operator<<(ostream &, const sanitize &); // printing out the thing out
-	sanitize operator+=(const string &str) {
+	sanitize operator+=(const string &str)
+	{
 		innerHTML += str; // concatenate & continue
 		return *this;
 	};
-	sanitize operator+=(const stringstream &str) {
+	sanitize operator+=(const stringstream &str)
+	{
 		innerHTML += str.str();
 		return *this;
 	};
-	sanitize operator+=(const istringstream &str) {
+	sanitize operator+=(const istringstream &str)
+	{
 		innerHTML += str.str();
 		return *this;
 	};
-	sanitize operator+=(const sanitize &san) {
+	sanitize operator+=(const sanitize &san)
+	{
 		innerHTML += san.innerHTML;
 		return *this;
 	}
-	void reset() {
+	sanitize operator++()
+	{
+		indent++;
+		// indent++;
+		return *this;
+	}
+	sanitize operator++(int) {
+		sanitize o = *this;
+		operator++();
+		return o;
+	}
+	sanitize operator--()
+	{
+		indent--;
+		return *this;
+	}
+	sanitize operator--(int) {
+		sanitize o = *this;
+		operator--();
+		return o;
+	}
+	int length() { return indent + 1; }
+
+	void reset()
+	{
 		innerHTML = "";
 		rule = cssRule();
 	}
@@ -220,25 +308,19 @@ private:
 	string innerHTML{""};
 	cssRule rule;
 	bool hr{false}; // horizontal rule type tags
+	int indent{0};
 };
 
 ostream &operator<<(ostream &os, const sanitize &san)
 {
-	
-	cssRule r(san.rule);
-	string nya = sanitize(san).cleanup(); // sanitized version of the otherwise raw innerHTML
-	// cout << "printing: \n\t" << nya << endl;
-	nya = (san.hr) ? ("<" + r.el + r.guts + " />") : string(r.printTag() + nya + r.printClose());
+
+	string nya{sanitize(san).cleanup()}; // sanitized version of the otherwise raw innerHTML
+	if (!san.hr)
+	{
+		nya = sanitize(san).printTag() + nya + sanitize(san).printClose();
+	}
 
 	os << nya;
-	
+
 	return os;
 }
-// sanitize operator+=(const string &str) {
-// 	// san.innerHTML = san.innerHTML + str;
-// 	// san.innerHTML = san.innerHTML;
-// 	// return san.innerHTML + str; // just concatinate them
-// }
-// sanitize operator+=(const istringstream &str, const sanitize &san) {
-// 	// return san.innerHTML + str.str(); // just concatinate them
-// }
