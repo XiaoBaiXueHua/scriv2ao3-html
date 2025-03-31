@@ -216,9 +216,9 @@ void cleaner()
 			}
 
 			cleanLine.clear();
-			trimAway = 0;// integer to let us know the index of the proper substring
+			trimAway = 0; // integer to let us know the index of the proper substring
 
-			bool remainingEls{true};
+			bool prevClosing{false};
 			regex anyEl("^(<(.*?)>)");
 			regex spanner("(<span\\sclass=\"(\\w|\\d|\\-)+\">)([^<]+)?(</span>)"); // picks the first span only
 
@@ -238,7 +238,7 @@ void cleaner()
 				regex_match(guts, smidge, tagStructure);
 				string currentEl{smidge[1].str()};
 				string currentClass{smidge[4].str()};
-				cout << "currentEl: " << currentEl << "\t\t" << "currentClass: " << currentClass << endl;
+				// cout << "currentEl: " << currentEl << "\t\t" << "currentClass: " << currentClass << endl;
 				pair<bool, cssRule> daRule = getRule(currentEl, currentClass, guts);
 				cssRule relevant = daRule.second;
 				bool endling{(currentEl == "p" && closing)}, block{relevant.display != "inline"}; // for now just closing paragraphs; will adjust as needed later
@@ -250,6 +250,8 @@ void cleaner()
 					pls = sanitize("", cssRule(relevant.parent, currentClass, relevant.guts));
 					// cout << "new pls: " << pls << endl
 					// 	 << endl;
+				} else if (!closing) {
+					nested++;
 				}
 				if (currentEl == "li")
 				{
@@ -262,10 +264,12 @@ void cleaner()
 
 				if (currentEl != "")
 				{
-					cout << "\n\nCURRENT EL: " << currentEl << endl;
+					// cout << "\n\nCURRENT EL: " << currentEl << endl;
 					if (closing)
 					{
-						if (!endling) {
+						if (!endling)
+						{
+							// cout << "prevEl: " << prevEl << endl;
 							cleanLine << full;
 						}
 					}
@@ -275,8 +279,6 @@ void cleaner()
 
 						// so if there is Anything relevant abt the class of the element we're currently working with
 						regex snorf{sneefer}; // make a regex out of sneefer
-
-						bool closing{guts[0] == '/'};
 
 						// this is p much the only way to get it to work on spans and p's for reasons that are frankly unknown to me
 						sregex_iterator nyooo(tmp.begin(), tmp.end(), snorf);
@@ -288,7 +290,7 @@ void cleaner()
 						{
 							if (daRule.first && !block) // if it's an element w/particular styling rules
 							{
-								cleanLine << relevant.printTag();
+								cleanLine << relevant.printTag(); // only print this if the previous element was the same as the current element...?
 							}
 
 							if (currentEl == "span")
@@ -309,7 +311,20 @@ void cleaner()
 						}
 						else
 						{
+							// cout << "classless element, " << nested << " inline(?) elements deep;\n\tcurrentEl: " << currentEl << "\tprevEl: " << prevEl << "\n\tclosing: " << closing << "\tprevClose: " << prevClosing << endl;
 							cleanLine << full;
+
+							// otherwise, if it's classless
+							// if (prevClosing) // and if the previous element was the same as the current one...
+							// {
+							// 	if (prevEl != currentEl) {
+							// 		// if the previous element was closing
+							// 		cleanLine << full; // only print it if the last one Wasn't a closing thing?
+							// 	}
+							// } else {
+							// 	// otherwise, if it's a new one, then um. uhh
+								
+							// }
 						}
 
 						if ((currentEl == "ul") || (currentEl == "ol"))
@@ -322,6 +337,8 @@ void cleaner()
 						// }
 						// prevEl = daRule.first ? relevant.el : currentEl; //
 					}
+					prevEl = daRule.first ? relevant.el : currentEl;
+					prevClosing = closing; // pass this along
 				}
 				else
 				{
@@ -351,6 +368,7 @@ void cleaner()
 					if (endling)		  // if tmp is empty or we're closing a paragraph
 					{
 						// cout << "this is an endling.\n\t" << currentEl << "\t" << currentClass << endl;
+						// prevEl = "";
 						linear.push_back(pls);
 						pls.reset();
 						break;
@@ -378,33 +396,40 @@ void cleaner()
 
 	// now we go through the html vector with the glorious benefits of an index
 	cout << "now to go through the lines array. (" << linear.size() << " lines)" << endl;
+	cout << "these are the lines w/double nesting (if any): " << endl;
 	for (int i{0}; i < linear.size(); i++)
 	{
 		bool more{i < linear.size() - 1}, hindsight{i > 0};
 		sanitize prev, next, current{linear[i]};
-		if (hindsight) {
+		if (hindsight)
+		{
 			prev = linear[i - 1];
 		}
-		if (more) {
+		if (more)
+		{
 			next = linear[i + 1];
 		}
-		if (current.bqtMode) {
+		if (current.bqtMode)
+		{
 			// so if we're currently in blockquote mode
-			if (!prev.bqtMode) {
+			if (!prev.bqtMode)
+			{
 				// default for bqtMode is false, so we don't need to worry abt doing some shit wrong
 				cleaned << current.printParent() << endl;
 			}
-
 		}
-		if (current.length() > 1) {
+		if (current.length() > 1)
+		{
 			// now we print our tabs
-			cleaned << setfill('\t') << setw(current.length() - 1) << ""; 
+			cleaned << setfill('\t') << setw(current.length() - 1) << "";
 		}
 
 		cleaned << current << endl;
 
-		if (current.bqtMode) {
-			if (!next.bqtMode) {
+		if (current.bqtMode)
+		{
+			if (!next.bqtMode)
+			{
 				cleaned << current.closeParent() << endl;
 			}
 		}

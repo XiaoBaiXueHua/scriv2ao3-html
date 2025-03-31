@@ -155,7 +155,6 @@ public:
 		}
 	}
 
-
 	string printTag() { return "<" + el + guts + ">"; }
 	string printClose() { return "</" + el + ">"; }
 	string printParent() { return "<" + parent + ">"; }
@@ -204,24 +203,19 @@ public:
 
 	void init(string s)
 	{
-		if (parent == "blockquote") {
+		if (parent != el)
+		{
 			indent = 1;
 		}
-		if (s == "~***~")
-		{
-			hr = true;
-		}
-		else
-		{
-			innerHTML = s;
-		}
+		innerHTML = s;
 	}
 
 	string cleanup()
 	{
 		string tmp = innerHTML; // leave the actual inner html untouched
-		if (hr)
+		if (hr || tmp == "~***~")
 		{
+			hr = true;
 			tmp = "<hr />";
 		}
 		else if ((tmp == "") || regex_search(tmp, regex("^(<(em|strong)>)*(\\s+|<br\\s?/>)(</(em|strong)>)*$")))
@@ -229,26 +223,55 @@ public:
 			// so if it's an empty string or just spaces
 			tmp = "&nbsp;"; // replace it with this nbsp
 		}
-		else if (regex_search(tmp, regex("&#\\d+;")))
+
+		// fix nesting issues
+		// first make the regex
+		string ack{""};
+		for (int i{0}; i < unnestings.size(); i++)
+		{
+			string e{unnestings[i]};
+			ack += "</" + e + "><" + e + ">";
+			if (i < unnestings.size() - 1)
+			{
+				ack += "|"; // add the pipe as well
+			}
+		}
+		ack = "(" + ack + ")"; // stick it all into a parenthetical
+
+		// then actually search and replace
+		regex guh(ack);
+		if (regex_search(tmp, guh))
+		{
+			cout << "before:\n\t" << tmp << endl;
+			while (regex_search(tmp, guh))
+			{
+				tmp = regex_replace(tmp, guh, "");
+			}
+			cout << "after:\n\t" << tmp << endl << endl;
+		}
+
+		if (regex_search(tmp, regex("&#\\d+;")))
 		{
 			// loop through and cleanup any sort of &#numbers; html code things
 
-			// cout << "now to replace the fucking &#\\d+; things in the line, \"" << tmp << "\"" << endl;
-			// string subTmp = tmp; // hold this
-			// tmp = ""; // clear this out
 			regex aiya{"(&#(\\d+);)(.)?"}; // this reults in 0 = full thing, 1 = just the numbers, and then 2 = whatever comes after
 			while (regex_search(tmp, regex("&#\\d+;")))
 			{
 				sregex_iterator oi{tmp.begin(), tmp.end(), aiya};
-				regex rpls(string((*oi)[1].str())); // should be the full thing
-				int num{stoi(string((*oi)[2].str()))};
-				string m{char(num)};
-				if (num == 60 && string((*oi)[1].str()) == "3")
+				sregex_iterator end;
+				while (oi != end)
 				{
-					// if it's a gt sign & followed by a 3
-					m = "&gt;"; // make it a gt instead
+					regex rpls(string((*oi)[1].str())); // should be the full thing
+					int num{stoi(string((*oi)[2].str()))};
+					string m{char(num)};
+					if (num == 60 && string((*oi)[1].str()) == "3")
+					{
+						// if it's a gt sign & followed by a 3
+						m = "&gt;"; // make it a gt instead
+					}
+					tmp = regex_replace(tmp, rpls, m);
+					oi++;
 				}
-				tmp = regex_replace(tmp, rpls, m);
 			}
 		}
 		return tmp; // for now just empty spaces
@@ -281,7 +304,8 @@ public:
 		// indent++;
 		return *this;
 	}
-	sanitize operator++(int) {
+	sanitize operator++(int)
+	{
 		sanitize o = *this;
 		operator++();
 		return o;
@@ -291,7 +315,8 @@ public:
 		indent--;
 		return *this;
 	}
-	sanitize operator--(int) {
+	sanitize operator--(int)
+	{
 		sanitize o = *this;
 		operator--();
 		return o;
@@ -309,6 +334,7 @@ private:
 	cssRule rule;
 	bool hr{false}; // horizontal rule type tags
 	int indent{0};
+	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested
 };
 
 ostream &operator<<(ostream &os, const sanitize &san)
