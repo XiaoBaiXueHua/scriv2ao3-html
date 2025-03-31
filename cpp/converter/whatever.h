@@ -65,15 +65,15 @@ public:
 		{
 			display = "block";
 		}
-		cout << "el: " << el << "\t\tklass: " << klass << "\trulez: " << rulez << endl
-			 << endl;
+		// cout << "el: " << el << "\t\tklass: " << klass << "\trulez: " << rulez << endl
+		//  << endl;
 		istringstream tmp(rulez);
 		while (getline(tmp, tmp2, ';'))
 		{
 			// tmp2 = string(regex_replace(regex_replace(tmp2, regex("^\\s*"), ""), regex("\\s*$"), "")); // trim
 			// tmp2 = cssRule::trim(tmp2);
 			tmp2 = trim(tmp2);
-			cout << tmp2 << endl;
+			// cout << tmp2 << endl;
 
 			istringstream wah(tmp2);
 			string tmp3{""};
@@ -92,9 +92,6 @@ public:
 				float misc{0.0};   // float to help out
 				if (tmpVec[0] == "font-size")
 				{
-					cout << "setting the font size." << endl;
-					// tmp3 = regex_replace(tmpVec[1], regex("\\w+$"), "");
-					// tmp3 = trim();
 					fontSize = stof(tmpVec[1]);
 					fsSpecified = true;
 				}
@@ -113,10 +110,7 @@ public:
 					if (misc >= 1)
 					{
 						parent = "blockquote";
-						// el = "blockquote";
-						// guts = "><p" + guts;
 						bqtMode = true;
-						// indent++;
 					}
 				}
 			}
@@ -125,7 +119,6 @@ public:
 			if ((el == "ul") || (el == "ol"))
 			{
 				listMode = true;
-				worthwhile = true;
 			}
 		}
 	}
@@ -159,18 +152,6 @@ public:
 	string printClose() { return "</" + el + ">"; }
 	string printParent() { return "<" + parent + ">"; }
 	string closeParent() { return "</" + parent + ">"; }
-
-	// the only thing we should be increasing/decreasing is the indent so like y'know
-	// cssRule &operator++()
-	// {
-	// 	indent++;
-	// 	return *this;
-	// }
-	// cssRule &operator--()
-	// {
-	// 	indent--;
-	// 	return *this;
-	// }
 
 	// fuck it. everyone's public
 
@@ -223,57 +204,104 @@ public:
 			// so if it's an empty string or just spaces
 			tmp = "&nbsp;"; // replace it with this nbsp
 		}
-
-		// fix nesting issues
-		// first make the regex
-		string ack{""};
-		for (int i{0}; i < unnestings.size(); i++)
+		else
 		{
-			string e{unnestings[i]};
-			ack += "</" + e + "><" + e + ">";
-			if (i < unnestings.size() - 1)
-			{
-				ack += "|"; // add the pipe as well
-			}
-		}
-		ack = "(" + ack + ")"; // stick it all into a parenthetical
+			// fix nesting issues
+			// first swap the order of consecutive <strong><em>s
 
-		// then actually search and replace
-		regex guh(ack);
-		if (regex_search(tmp, guh))
-		{
-			cout << "before:\n\t" << tmp << endl;
-			while (regex_search(tmp, guh))
+			regex misnested("<strong><em>"); // just hard code it for now i suppose
+			if (regex_search(tmp, misnested))
 			{
-				tmp = regex_replace(tmp, guh, "");
-			}
-			cout << "after:\n\t" << tmp << endl << endl;
-		}
-
-		if (regex_search(tmp, regex("&#\\d+;")))
-		{
-			// loop through and cleanup any sort of &#numbers; html code things
-
-			regex aiya{"(&#(\\d+);)(.)?"}; // this reults in 0 = full thing, 1 = just the numbers, and then 2 = whatever comes after
-			while (regex_search(tmp, regex("&#\\d+;")))
-			{
-				sregex_iterator oi{tmp.begin(), tmp.end(), aiya};
-				sregex_iterator end;
-				while (oi != end)
+				while (regex_search(tmp, misnested))
 				{
-					regex rpls(string((*oi)[1].str())); // should be the full thing
-					int num{stoi(string((*oi)[2].str()))};
-					string m{char(num)};
-					if (num == 60 && string((*oi)[1].str()) == "3")
+					tmp = regex_replace(tmp, misnested, "<em><strong>");
+				}
+
+				// now the closing tags
+				misnested = "</em></strong>";
+				while (regex_search(tmp, misnested))
+				{
+					tmp = regex_replace(tmp, misnested, "</strong></em>");
+				}
+			}
+			// regex misnested("((<strong>)(<em>)|(</em>)(</strong>))");
+			// if (regex_search(tmp, misnested))
+			// { // 2 is the first element, while 3 is the second
+			//   // smatch smosh;
+
+			// 	int i{0};
+			// 	while (regex_search(tmp, misnested))
+			// 	{
+			// 		sregex_iterator smosh(tmp.begin(), tmp.end(), misnested);
+			// 		// sregex_iterator end;
+			// 		// while (smosh != end)
+			// 		// {
+
+			// 		for (const auto s : *smosh)
+			// 		{
+			// 			cout << i << ": " << s.str() << endl;
+			// 			i++;
+			// 		}
+			// 		tmp = regex_replace(tmp, misnested, string{(*smosh)[3].str() + (*smosh)[2].str()});
+			// 		// 	smosh++;
+			// 		// }
+			// 	}
+
+			// 	// regex_match(tmp, smosh, misnested);
+			// 	// for (int i{0}; i < smosh.length(); i++) {
+			// 	// 	cout << i << ": " << smosh[i].str() << endl;
+			// 	// }
+			// 	// tmp = regex_replace(tmp, misnested, ""); // for now just get rid of them i just want to look at the matches in the terminal
+			// }
+			// make the regex
+			string ack{""};
+			for (int i{0}; i < unnestings.size(); i++)
+			{
+				string e{unnestings[i]};
+				ack += "</" + e + "><" + e + ">";
+				if (i < unnestings.size() - 1)
+				{
+					ack += "|"; // add the pipe as well
+				}
+			}
+			ack = "(" + ack + ")"; // stick it all into a parenthetical
+
+			// then actually search and replace
+			regex guh(ack);
+			if (regex_search(tmp, guh))
+			{
+				while (regex_search(tmp, guh))
+				{
+					tmp = regex_replace(tmp, guh, "");
+				}
+			}
+
+			if (regex_search(tmp, regex("&#\\d+;")))
+			{
+				// loop through and cleanup any sort of &#numbers; html code things
+
+				regex aiya{"(&#(\\d+);)(.)?"}; // this reults in 0 = full thing, 1 = just the numbers, and then 2 = whatever comes after
+				while (regex_search(tmp, regex("&#\\d+;")))
+				{
+					sregex_iterator oi{tmp.begin(), tmp.end(), aiya};
+					sregex_iterator end;
+					while (oi != end)
 					{
-						// if it's a gt sign & followed by a 3
-						m = "&gt;"; // make it a gt instead
+						regex rpls(string((*oi)[1].str())); // should be the full thing
+						int num{stoi(string((*oi)[2].str()))};
+						string m{char(num)};
+						if (num == 60 && string((*oi)[1].str()) == "3")
+						{
+							// if it's a gt sign & followed by a 3
+							m = "&gt;"; // make it a gt instead
+						}
+						tmp = regex_replace(tmp, rpls, m);
+						oi++;
 					}
-					tmp = regex_replace(tmp, rpls, m);
-					oi++;
 				}
 			}
 		}
+
 		return tmp; // for now just empty spaces
 	}
 
@@ -339,11 +367,11 @@ private:
 
 ostream &operator<<(ostream &os, const sanitize &san)
 {
-
-	string nya{sanitize(san).cleanup()}; // sanitized version of the otherwise raw innerHTML
-	if (!san.hr)
+	sanitize copy(san);
+	string nya{copy.cleanup()}; // sanitized version of the otherwise raw innerHTML
+	if (!copy.hr)
 	{
-		nya = sanitize(san).printTag() + nya + sanitize(san).printClose();
+		nya = copy.printTag() + nya + copy.printClose();
 	}
 
 	os << nya;

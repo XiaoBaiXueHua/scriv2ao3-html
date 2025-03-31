@@ -161,9 +161,9 @@ void cleaner()
 				{
 					medianFontSize = tmpStyles[floor((tmpStyles.size() - 1) / 2)].fontSize;
 				}
-				cout << "median font size: " << medianFontSize << endl;
+				// cout << "median font size: " << medianFontSize << endl;
 
-				cout << "ostensibly sorted by font size. let's check: " << endl;
+				// cout << "ostensibly sorted by font size. let's check: " << endl;
 				stylesheet.clear();
 				// stylesheet.swap(&vector<cssRule>{});
 				// stylesheet = {};
@@ -171,7 +171,7 @@ void cleaner()
 				{
 					if (r.fsSpecified)
 					{ // this only matters if the font size has been specified
-						cout << "font size: " << r.fontSize << endl;
+						// cout << "font size: " << r.fontSize << endl;
 
 						if ((r.fontSize < medianFontSize - 0.1) || (r.fontSize > medianFontSize + 0.1))
 						{
@@ -187,8 +187,8 @@ void cleaner()
 							}
 						}
 					}
-					cout << "\t" << r.el << "." << r.klass << " {" << r.rulez << "}" << endl
-						 << endl;
+					// cout << "\t" << r.el << "." << r.klass << " {" << r.rulez << "}" << endl
+						//  << endl;
 					if (r.el != "span")
 					{
 						stylesheet.push_back(r);
@@ -311,20 +311,7 @@ void cleaner()
 						}
 						else
 						{
-							// cout << "classless element, " << nested << " inline(?) elements deep;\n\tcurrentEl: " << currentEl << "\tprevEl: " << prevEl << "\n\tclosing: " << closing << "\tprevClose: " << prevClosing << endl;
 							cleanLine << full;
-
-							// otherwise, if it's classless
-							// if (prevClosing) // and if the previous element was the same as the current one...
-							// {
-							// 	if (prevEl != currentEl) {
-							// 		// if the previous element was closing
-							// 		cleanLine << full; // only print it if the last one Wasn't a closing thing?
-							// 	}
-							// } else {
-							// 	// otherwise, if it's a new one, then um. uhh
-								
-							// }
 						}
 
 						if ((currentEl == "ul") || (currentEl == "ol"))
@@ -334,11 +321,7 @@ void cleaner()
 							// cout << "listSwitch: true (" << listSwitch << ")" << endl;
 							pls = sanitize("", cssRule(currentEl, currentClass, ""));
 						}
-						// }
-						// prevEl = daRule.first ? relevant.el : currentEl; //
 					}
-					prevEl = daRule.first ? relevant.el : currentEl;
-					prevClosing = closing; // pass this along
 				}
 				else
 				{
@@ -368,7 +351,6 @@ void cleaner()
 					if (endling)		  // if tmp is empty or we're closing a paragraph
 					{
 						// cout << "this is an endling.\n\t" << currentEl << "\t" << currentClass << endl;
-						// prevEl = "";
 						linear.push_back(pls);
 						pls.reset();
 						break;
@@ -396,7 +378,6 @@ void cleaner()
 
 	// now we go through the html vector with the glorious benefits of an index
 	cout << "now to go through the lines array. (" << linear.size() << " lines)" << endl;
-	cout << "these are the lines w/double nesting (if any): " << endl;
 	for (int i{0}; i < linear.size(); i++)
 	{
 		bool more{i < linear.size() - 1}, hindsight{i > 0};
