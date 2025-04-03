@@ -33,58 +33,13 @@ void explorer();
 void showEntries();
 void showMaze();
 void cleaner();
-pair<bool, cssRule> getRule(string &str);
-pair<bool, cssRule> getRule(string &e, string &c, string &g)
-{
-	// same as just the class but this time we specify other things lol
-	cssRule t(e, c, g);
-	bool m{false};
-	// pair<bool, cssRule> p;
-	for (auto r : stylesheet)
-	{
-		if (r.klass == c)
-		{
-			// cout << "located the class \"" << str << "\"." << endl;
-			t = r;
-			m = true;
-			break;
-		}
-	}
-	// p = make_pair(m, t);
-	return make_pair(m, t);
-}
-void snip()
-{
-	try
-	{
-		tmp.erase(tmp.begin(), tmp.begin() + trimAway);
-		// if (listSwitch) {
-
-		// 	// cout << *cow << endl;
-		// }
-		// cout << tmp << endl;
-	}
-	catch (out_of_range)
-	{
-		cout << "out of range!!" << endl;
-		// break;
-		tmp = "";
-	}
-}
-void handleLi()
-{
-	cleanLine << full; // add the <li> to it
-	snip();			   // then we have to snip it
-	regex moo{"(.*?)(?=<)"};
-	regex_iterator cow(tmp.begin(), tmp.end(), moo);
-	for (int i{0}; i < (*cow).size(); i++)
-	{
-		cout << i << ": " << (*cow)[i].str() << endl;
-	}
-	innerHTML = (*cow)[0].str();
-	cleanLine << innerHTML;
-	tmp.erase(tmp.begin(), tmp.begin() + innerHTML.length());
-}
+pair<bool, cssRule> getRule(string &);
+pair<bool, cssRule> getRule(string &, string &, string &);
+void snip();
+void handleLi();
+string currentPath(); // returns the maze up to the current folder
+void makeDir();
+void open(filesystem::directory_entry); // opens up the cleaned thing
 
 int main()
 {
@@ -92,11 +47,18 @@ int main()
 	showEntries();
 	explorer();
 	showMaze();
-	convertOpt = 3;
+	// convertOpt = 3;
 	switch (convertOpt)
 	{
 	case 1:
 	{ // all files, but not sub-folders
+		for (auto const &dir_entry : filesystem::directory_iterator{currentPath()})
+		{
+			if (!dir_entry.is_directory())
+			{
+				cleaner();
+			}
+		}
 		break;
 	}
 	case 2:
@@ -106,7 +68,29 @@ int main()
 	case 3:
 	{
 		// only some files
-		cleaner();
+		cout << "Choose a file or folder: ";
+		cin >> convertOpt;
+		while ((convertOpt < 1 || convertOpt >= entries.size()))
+		{
+			// make sure we've chosen an Actual Thing
+			cout << "Not Allowed. Try again: ";
+			cin >> convertOpt;
+		}
+		currFile = entries[convertOpt - 1];
+		if (currFile.is_directory())
+		{
+			// loop all
+			for (auto const &dir_entry : filesystem::directory_iterator{currFile})
+			{
+				cleaner();
+			}
+		}
+		else
+		{
+			// do the one
+			cleaner();
+		}
+		// if the selected thing
 		break;
 	}
 	}
@@ -115,6 +99,11 @@ int main()
 
 void cleaner()
 {
+	cout << "Now cleaning: " << currFile.path().stem() << endl
+		 << endl;
+	raw.open(currFile.path()); // open the raw
+	open(currFile);			   // open the output
+
 	// bool listSwitch{false}; // bool for list mode
 	bool styleSwitch{false}, bodySwitch{false}, bqtSwitch{false}, listSwitch{false};
 	// vector<string> lines{}; // actually let's just have a vector of the body lines. i think that'll make it easier to work with in the end
@@ -125,8 +114,6 @@ void cleaner()
 	vector<sanitize> linear;
 	float medianFontSize{1.00};
 	// vector<string> cssRules{};
-	raw.open(entries[2].path());
-	cleaned.open("output/yoink.html");
 	// cleaned.open("output/test.html"); // just the test for now
 	cleaned.clear();
 	// cleaned << "hi? " << endl;
@@ -136,9 +123,7 @@ void cleaner()
 	// go through the whole thing once
 	while (getline(raw, tmp))
 	{
-		// tmp = string(regex_replace(regex_replace(tmp, regex("\\s*$"), ""), regex("^\\s*"), "")); // trim the spaces around the html
-		// tmp = cssRule::trim(tmp);
-		tmp = trim(tmp);
+		tmp = trim(tmp); // trim owo
 		// cout << tmp << endl;
 		// if (regex_search(tmp, regex("<style.+>")))
 
@@ -188,7 +173,7 @@ void cleaner()
 						}
 					}
 					// cout << "\t" << r.el << "." << r.klass << " {" << r.rulez << "}" << endl
-						//  << endl;
+					//  << endl;
 					if (r.el != "span")
 					{
 						stylesheet.push_back(r);
@@ -250,7 +235,9 @@ void cleaner()
 					pls = sanitize("", cssRule(relevant.parent, currentClass, relevant.guts));
 					// cout << "new pls: " << pls << endl
 					// 	 << endl;
-				} else if (!closing) {
+				}
+				else if (!closing)
+				{
 					nested++;
 				}
 				if (currentEl == "li")
@@ -327,17 +314,20 @@ void cleaner()
 				{
 					if (!closing) // shouldn't have to deal with this anymore, but we'll see still
 					{
-						cout << "...but smth weird happened.\n\t" << tmp;
+						cout << "...but smth weird happened.\n\t" << tmp << endl;
 						if (tmp.length() <= 1)
 						{
 							tmp = "";
 						}
+						else if (!listSwitch)
+						{
+							cleanLine << full; // we'll fix this up more later when working with those wretched list items
+						}
 						else
 						{
-							break;
+							break; // break it if we're in list mode
 						}
 					}
-					// cleanLine << full;
 					// break;
 				}
 				snip();
@@ -415,6 +405,9 @@ void cleaner()
 			}
 		}
 	}
+
+	raw.close(); // close the streaaaaams
+	cleaned.close();
 }
 
 void explorer() // transforms convertOpt
@@ -483,7 +476,7 @@ void showEntries()
 		for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 		{
 			filesystem::path currPath{dir_entry.path()};
-			if (dir_entry.is_directory() || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
+			if ((dir_entry.is_directory() && !regex_search(currPath.string(), regex("_files$"))) || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
 			{
 				if (dir_entry.is_directory())
 				{
@@ -540,4 +533,106 @@ pair<bool, cssRule> getRule(string &str)
 	}
 	// p = make_pair(m, t);
 	return make_pair(m, t);
+}
+
+pair<bool, cssRule> getRule(string &e, string &c, string &g)
+{
+	// same as just the class but this time we specify other things lol
+	cssRule t(e, c, g);
+	bool m{false};
+	// pair<bool, cssRule> p;
+	for (auto r : stylesheet)
+	{
+		if (r.klass == c)
+		{
+			// cout << "located the class \"" << str << "\"." << endl;
+			t = r;
+			m = true;
+			break;
+		}
+	}
+	// p = make_pair(m, t);
+	return make_pair(m, t);
+}
+
+void snip()
+{
+	try
+	{
+		tmp.erase(tmp.begin(), tmp.begin() + trimAway);
+		// if (listSwitch) {
+
+		// 	// cout << *cow << endl;
+		// }
+		// cout << tmp << endl;
+	}
+	catch (out_of_range)
+	{
+		cout << "out of range!!" << endl;
+		// break;
+		tmp = "";
+	}
+}
+
+void handleLi()
+{
+	cleanLine << full; // add the <li> to it
+	snip();			   // then we have to snip it
+	regex moo{"(.*?)(?=<)"};
+	regex_iterator cow(tmp.begin(), tmp.end(), moo);
+	for (int i{0}; i < (*cow).size(); i++)
+	{
+		cout << i << ": " << (*cow)[i].str() << endl;
+	}
+	innerHTML = (*cow)[0].str();
+	cleanLine << innerHTML;
+	tmp.erase(tmp.begin(), tmp.begin() + innerHTML.length());
+}
+
+string currentPath()
+{
+	string t{""};
+	for (auto const &entry : fileMaze)
+	{
+		t += entry + " / ";
+	}
+	return t;
+}
+
+void makeDir()
+{
+	//
+	string op{"output"};
+	if (!filesystem::directory_entry(op).exists())
+	{
+		filesystem::create_directory(op); // make the output folder if dne
+	}
+	for (auto const &ent : fileMaze)
+	{
+		op += "/" + ent;
+		if (!filesystem::directory_entry(op).exists())
+		{
+			// if a particular subfolder doesn't exist, then create it
+			filesystem::create_directory(op + "/");
+			cout << "Now creating directory: " << tmp << endl;
+		}
+	}
+}
+
+void open(filesystem::directory_entry p)
+{
+	makeDir(); // make the directories if necessary
+	string op{"output/" + currentPath() + currFile.path().stem().string() + ".html"};
+	// should only really be a thing for the cleaned, so this should be our final output path as a string
+	// cleaned.open(p.path());
+	cout << "Now opening: " << op << endl;
+	cleaned.open(op);
+	if (!cleaned.is_open())
+	{
+		cleaned.clear();
+		cleaned.open(op, ios::out);
+		cleaned.close();
+		cleaned.open(op);
+	}
+	//
 }
