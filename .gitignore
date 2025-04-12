@@ -37,8 +37,7 @@
 *.ilk
 
 # artifacts of creation
-**/output/*.html
-**/output/*.css
+**/output/**
 **/tmp/*
 **/log.txt
 
