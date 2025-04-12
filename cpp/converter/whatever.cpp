@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include "whatever.h"
+// #include "whatever-functions.cpp"
 
 using namespace std;
 
@@ -24,9 +25,10 @@ string innerHTML{""};
 string full{""}, guts{""};
 
 stringstream cleanLine;
+sanitize pls;
 
 smatch smidge;
-bool hasDirectory{false};
+bool hasDirectory{false}, listSwitch{false};
 int convertOpt{0}, trimAway{0};
 
 void explorer();
@@ -36,14 +38,17 @@ void cleaner();
 pair<bool, cssRule> getRule(string &);
 pair<bool, cssRule> getRule(string &, string &, string &);
 void snip();
-void handleLi();
+void pushLine(vector<sanitize> &v);			// both pls && cleanLine are global, so this doesn't need to take those as args
+void pushLine(vector<sanitize> &v, bool c); // conditional version
+
 string currentPath(); // returns the maze up to the current folder
 void makeDir();
 void open(filesystem::directory_entry); // opens up the cleaned thing
 
 int main()
 {
-	// cout << "...hewwo???" << endl;
+	cleaned << setfill('\t'); // set this to tabs
+	
 	showEntries();
 	explorer();
 	showMaze();
@@ -52,18 +57,21 @@ int main()
 	{
 	case 1:
 	{ // all files, but not sub-folders
+		cout << "Cleaning all files, but not sub-folders." << endl;
 		for (auto const &dir_entry : filesystem::directory_iterator{currentPath()})
 		{
-			if (!dir_entry.is_directory())
-			{
-				cleaner();
-			}
+			// if (!dir_entry.is_directory())
+			// {
+			currFile = dir_entry;
+			cleaner();
+			// }
 		}
 		break;
 	}
 	case 2:
 	{
 		// all files AND sub-folders
+		cout << "Cleaning all files And sub-folders." << endl;
 	}
 	case 3:
 	{
@@ -76,12 +84,14 @@ int main()
 			cout << "Not Allowed. Try again: ";
 			cin >> convertOpt;
 		}
+
 		currFile = entries[convertOpt - 1];
 		if (currFile.is_directory())
 		{
 			// loop all
 			for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 			{
+				currFile = dir_entry;
 				cleaner();
 			}
 		}
@@ -105,10 +115,11 @@ void cleaner()
 	open(currFile);			   // open the output
 
 	// bool listSwitch{false}; // bool for list mode
-	bool styleSwitch{false}, bodySwitch{false}, bqtSwitch{false}, listSwitch{false};
+	bool styleSwitch{false}, bodySwitch{false}, bqtSwitch{false};
+	listSwitch = false;
 	// vector<string> lines{}; // actually let's just have a vector of the body lines. i think that'll make it easier to work with in the end
-	string prevEl{"p"};
-	sanitize pls;
+	string parentEl{"ul"}; // parent element for list items
+	int bodyLine{0};
 
 	// vector<pair<string, cssRule>> linear;
 	vector<sanitize> linear;
@@ -123,7 +134,9 @@ void cleaner()
 	// go through the whole thing once
 	while (getline(raw, tmp))
 	{
-		tmp = trim(tmp); // trim owo
+		bodyLine++;
+		string untrimmed{tmp}; // untrimmed version for list items maybe
+		tmp = trim(tmp);	   // trim owo
 		// cout << tmp << endl;
 		// if (regex_search(tmp, regex("<style.+>")))
 
@@ -200,14 +213,23 @@ void cleaner()
 				break;
 			}
 
+			cout << "line: " << bodyLine << endl;
 			cleanLine.clear();
 			trimAway = 0; // integer to let us know the index of the proper substring
 
 			bool prevClosing{false};
 			regex anyEl("^(<(.*?)>)");
-			regex spanner("(<span\\sclass=\"(\\w|\\d|\\-)+\">)([^<]+)?(</span>)"); // picks the first span only
+			// regex spanner("(<span\\sclass=\"(\\w|\\d|\\-)+\">)([^<]+)?(</span>)"); // picks the first span only
 
-			int nested{0}; // integer to track how many nested layers deep we are
+			if (bodyLine == 62)
+			{
+				//
+				cout << "full untrimmed line: " << endl;
+				cout << untrimmed << endl;
+				cout << "pls: " << endl;
+				cout << pls << endl;
+			}
+
 			while (tmp != "")
 			{
 				regex_iterator elemental(tmp.begin(), tmp.end(), anyEl); // first one is the full element, the other is its guts; we mostly work based off what the guts are
@@ -221,35 +243,79 @@ void cleaner()
 				regex tagStructure("/?((\\w|\\d)+)(\\sclass=\"(.*?)\")?"); // this results in 0 = guts, 1 = element name, and 4 = class name
 
 				regex_match(guts, smidge, tagStructure);
+				// cout << "\tlooking at smidges: " << endl;
+				// for (const auto s : smidge)
+				// {
+				// 	cout << "(" << s << ")\t";
+				// }
+				// cout << endl;
 				string currentEl{smidge[1].str()};
 				string currentClass{smidge[4].str()};
 				// cout << "currentEl: " << currentEl << "\t\t" << "currentClass: " << currentClass << endl;
 				pair<bool, cssRule> daRule = getRule(currentEl, currentClass, guts);
 				cssRule relevant = daRule.second;
-				bool endling{(currentEl == "p" && closing)}, block{relevant.display != "inline"}; // for now just closing paragraphs; will adjust as needed later
+
+				bool endling{((currentEl == "p") && closing)}; // for now just closing paragraphs; will adjust as needed later
+				// it also does not include "li" bc those get handled separately n will break on their own, so it would be redundant to include them in endling
+
+				bool block{relevant.display != "inline"}, inList{(currentEl == "ol" || currentEl == "ul")};
 
 				if (block) // so. technically this just means "not an inline"
 				{
-					// cout << "not a span or li, right??? " << currentEl << endl;
+					pls = sanitize("", cssRule((listSwitch ? parentEl : relevant.parent), currentClass, relevant.guts));
+				}
 
-					pls = sanitize("", cssRule(relevant.parent, currentClass, relevant.guts));
-					// cout << "new pls: " << pls << endl
-					// 	 << endl;
-				}
-				else if (!closing)
-				{
-					nested++;
-				}
 				if (currentEl == "li")
 				{
-					handleLi();
-					tmp += "</li>"; // fuck it. just add itjust add it
-					cout << tmp << endl;
-					pls++;
-					// listSwitch = false;
-				}
 
-				if (currentEl != "")
+					if (!closing)
+					{
+						// can't be doing this if it's an orphaned closing tag
+
+						// having it match for anything that's not a < means it can also match for non-ascii characters
+						regex listStructure("<li>(.*)"); // closing tag optional; leave middle greedy n check the end for "</li>" to cut off after
+						regex_iterator cow(tmp.begin(), tmp.end(), listStructure);
+
+						innerHTML = (*cow)[1].str(); // extracts the inner stuff while keeping the ugly spans for now
+
+						if (regex_search(innerHTML, regex("</li>")))
+						{
+							// if there's an </li> at the end, cut it off
+							innerHTML = innerHTML.substr(0, innerHTML.length() - 5);
+						}
+						// else
+						// {
+						// 	cout << "this is a list item w/o a closing tag." << endl;
+						// }
+
+						// snip(); // we have to snip the <li> away before redeclaring the snip away bits, but After the innerHTML gets saved
+
+						regex spaces("^\\s+"); // get spaces from the start
+						// regex_match(untrimmed, smidge, spaces);
+						regex_token_iterator oi(untrimmed.begin(), untrimmed.end(), spaces);
+						cout << "this would be a setw(" << (*oi).str().length() << "); adding " << (floor((*oi).str().length() / 2) - 1) << endl;
+						cout << "pls currently has an indent of: " << pls.length() << endl;
+						pls += (floor((*oi).str().length() / 2) - 1); // add the indent. also floor it just in case
+
+						cleanLine << innerHTML;
+
+						// we shouldn't really need the final snip since tmp gets reset anyway
+						// trimAway = innerHTML.length();
+						// cout << "trimming away " << trimAway << " chars from " << tmp << endl;
+						// snip();
+					}
+					else
+					{
+						listSwitch = false;
+						cout << "break due to orphaned li." << endl;
+						pls.reset(); // reset and do Not push it
+						break;
+					}
+					cout << "break due to unclosed list item." << endl;
+					pushLine(linear); // have to push this or else it will go missing
+					break;
+				}
+				else if (currentEl != "")
 				{
 					// cout << "\n\nCURRENT EL: " << currentEl << endl;
 					if (closing)
@@ -259,6 +325,19 @@ void cleaner()
 							// cout << "prevEl: " << prevEl << endl;
 							cleanLine << full;
 						}
+						else if (inList)
+						{
+							// otherwise if we're closing off a list
+
+							listSwitch = false;
+							cout << "turning off the list." << endl;
+						}
+					}
+					else if (inList)
+					{
+						// can't do the usual sneefer snorf
+						listSwitch = true;	  // turn list mode on
+						parentEl = currentEl; // and save which kind of list it was
 					}
 					else
 					{
@@ -291,24 +370,17 @@ void cleaner()
 									cleanLine << relevant.printClose();
 								}
 							}
-							else if (currentEl == "p")
-							{
-								nested++;
-							}
+							// else if (currentEl == "p")
+							// {
+							// 	nested++;
+							// }
 						}
 						else
 						{
 							cleanLine << full;
 						}
-
-						if ((currentEl == "ul") || (currentEl == "ol"))
-						{
-							cout << "in a list" << endl;
-							// listSwitch = true; // turn list mode on
-							// cout << "listSwitch: true (" << listSwitch << ")" << endl;
-							pls = sanitize("", cssRule(currentEl, currentClass, ""));
-						}
 					}
+					snip();
 				}
 				else
 				{
@@ -325,24 +397,21 @@ void cleaner()
 						}
 						else
 						{
+							cout << "break due to list switch stuffs." << endl;
 							break; // break it if we're in list mode
 						}
+
+						snip();
 					}
 					// break;
 				}
-				snip();
 
 				if (closing)
 				{
-					pls += cleanLine; // add the inner HTML to the pls
-					// clear the line Before we break the thing
-					stringstream whee("");
-					cleanLine.swap(whee); // can we just. clear it like that.
-					if (endling)		  // if tmp is empty or we're closing a paragraph
+					pushLine(linear, endling);
+					if (endling)
 					{
-						// cout << "this is an endling.\n\t" << currentEl << "\t" << currentClass << endl;
-						linear.push_back(pls);
-						pls.reset();
+						cout << "break due to endling." << endl;
 						break;
 					}
 				}
@@ -368,6 +437,7 @@ void cleaner()
 
 	// now we go through the html vector with the glorious benefits of an index
 	cout << "now to go through the lines array. (" << linear.size() << " lines)" << endl;
+
 	for (int i{0}; i < linear.size(); i++)
 	{
 		bool more{i < linear.size() - 1}, hindsight{i > 0};
@@ -389,13 +459,48 @@ void cleaner()
 				cleaned << current.printParent() << endl;
 			}
 		}
-		if (current.length() > 1)
+		if (current.listMode)
+		{
+			int first{prev.length()}, second{current.length()};
+			if (!prev.listMode || first < second)
+			{
+
+				if (!prev.listMode) // if the previous one wasn't a list, then we gotta start from scratch regardless of how many indents prev had
+				{
+					first = 0;
+				}
+				while (first < second)
+				{
+					cleaned << setw(first) << "" << current.printParent() << endl;
+					first++;
+				}
+			}
+		}
+		if (current.length() > 0)
 		{
 			// now we print our tabs
-			cleaned << setfill('\t') << setw(current.length() - 1) << "";
+			cleaned << setw(current.length()) << "";
 		}
 
 		cleaned << current << endl;
+
+		if (current.listMode)
+		{
+			int first{next.length()}, second{current.length()};
+			if (!next.listMode || first < second)
+			{
+				if (!next.listMode) // if the next one isn't a list, then we must cut off All the lists. this will probably have to get more elaborate when nesting ul and ol w/in each other but whatever not my problem Right Now
+				{
+					first = 0; // set this one to 0
+				}
+				while (first < second && second >= 0)
+				{
+					// so while the next one is less than the current one
+					cleaned << setw(second - 1) << "" << current.closeParent() << endl;
+					second--; // going backwards here
+				}
+			}
+		}
 
 		if (current.bqtMode)
 		{
@@ -559,42 +664,64 @@ void snip()
 {
 	try
 	{
-		tmp.erase(tmp.begin(), tmp.begin() + trimAway);
-		// if (listSwitch) {
 
+		// if (listSwitch)
+		// {
+		// 	cout << "(supposedly) trimming a list item." << endl;
 		// 	// cout << *cow << endl;
 		// }
+		tmp.erase(tmp.begin(), tmp.begin() + trimAway);
+
 		// cout << tmp << endl;
 	}
 	catch (out_of_range)
 	{
 		cout << "out of range!!" << endl;
+		// cout << e.what();
 		// break;
 		tmp = "";
 	}
 }
 
-void handleLi()
+void pushLine(vector<sanitize> &v)
 {
-	cleanLine << full; // add the <li> to it
-	snip();			   // then we have to snip it
-	regex moo{"(.*?)(?=<)"};
-	regex_iterator cow(tmp.begin(), tmp.end(), moo);
-	for (int i{0}; i < (*cow).size(); i++)
-	{
-		cout << i << ": " << (*cow)[i].str() << endl;
-	}
-	innerHTML = (*cow)[0].str();
-	cleanLine << innerHTML;
-	tmp.erase(tmp.begin(), tmp.begin() + innerHTML.length());
+	pls += cleanLine; // add the inner HTML to the pls
+	// cout << "break due to list item." << endl;
+	// cout << pls << endl;
+	// clear the line Before we break the thing
+	stringstream whee("");
+	cleanLine.swap(whee); // can we just. clear it like that.
+	v.push_back(pls);
+	pls.reset();
 }
+
+void pushLine(vector<sanitize> &v, bool c)
+{
+	pls += cleanLine; // add the inner HTML to the pls
+	// clear the line Before we break the thing
+	stringstream whee("");
+	cleanLine.swap(whee); // can we just. clear it like that.
+	if (c)				  // if tmp is empty or we're closing a paragraph
+	{
+		v.push_back(pls);
+		pls.reset();
+	}
+}
+
+// void tabulate(sanitize &a, sanitize &b)
+// {
+// 	if (a.length() < b.length() && a.listMode)
+// 	{
+// 		//
+// 	}
+// }
 
 string currentPath()
 {
 	string t{""};
 	for (auto const &entry : fileMaze)
 	{
-		t += entry + " / ";
+		t += entry + "/";
 	}
 	return t;
 }

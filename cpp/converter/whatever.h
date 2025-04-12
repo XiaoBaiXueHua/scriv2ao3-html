@@ -115,6 +115,10 @@ public:
 				}
 			}
 
+			if ((el == "blockquote") || (el == "ul") || (el == "ol")) {
+				parentage = true; 
+			}
+
 			// turning the list mode on depending on the element
 			if ((el == "ul") || (el == "ol"))
 			{
@@ -129,11 +133,12 @@ public:
 		klass = c;
 		guts = g;
 		parent = el;
-		if (el == "blockquote" || el == "ol" || el == "ul")
-		{
-			// parent = el;
-			// indent++;
-		}
+		// if (el == "blockquote" || el == "ol" || el == "ul")
+		// {
+		// 	parentage = true;
+		// 	// parent = el;
+		// 	// indent++;
+		// }
 
 		if (el == "blockquote")
 		{
@@ -154,21 +159,23 @@ public:
 	string closeParent() { return "</" + parent + ">"; }
 
 	// fuck it. everyone's public
-
 	string el{""}, klass{""}, rulez{""}, display{"inline"}, guts{""}, parent{""}; // "parent" is used for things like blockquotes n lists, which have important nesting happening
 
-	bool bqtMode{false}, listMode{false}, fsSpecified{false}, worthwhile{false}; // booleans for when we're working w/blockquotes n stuff
+	bool bqtMode{false}, listMode{false}, fsSpecified{false}, worthwhile{false}, parentage{false}; // booleans for when we're working w/blockquotes n stuff
 
 	float fontSize{0.0}; // measured in rems
 
 private:
 	// int indent{0};
+protected:
+string innerHTML{""};
 };
 
 class sanitize : public cssRule
 {
 public:
 	sanitize() {};
+	sanitize(string s) : cssRule() { init(s); }
 	sanitize(string s, cssRule r) : cssRule(r)
 	{
 		init(s);
@@ -224,35 +231,7 @@ public:
 					tmp = regex_replace(tmp, misnested, "</strong></em>");
 				}
 			}
-			// regex misnested("((<strong>)(<em>)|(</em>)(</strong>))");
-			// if (regex_search(tmp, misnested))
-			// { // 2 is the first element, while 3 is the second
-			//   // smatch smosh;
 
-			// 	int i{0};
-			// 	while (regex_search(tmp, misnested))
-			// 	{
-			// 		sregex_iterator smosh(tmp.begin(), tmp.end(), misnested);
-			// 		// sregex_iterator end;
-			// 		// while (smosh != end)
-			// 		// {
-
-			// 		for (const auto s : *smosh)
-			// 		{
-			// 			cout << i << ": " << s.str() << endl;
-			// 			i++;
-			// 		}
-			// 		tmp = regex_replace(tmp, misnested, string{(*smosh)[3].str() + (*smosh)[2].str()});
-			// 		// 	smosh++;
-			// 		// }
-			// 	}
-
-			// 	// regex_match(tmp, smosh, misnested);
-			// 	// for (int i{0}; i < smosh.length(); i++) {
-			// 	// 	cout << i << ": " << smosh[i].str() << endl;
-			// 	// }
-			// 	// tmp = regex_replace(tmp, misnested, ""); // for now just get rid of them i just want to look at the matches in the terminal
-			// }
 			// make the regex
 			string ack{""};
 			for (int i{0}; i < unnestings.size(); i++)
@@ -300,11 +279,44 @@ public:
 					}
 				}
 			}
+
+			regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
+			// and then perhaps finally, ruby textW
+			if (regex_search(tmp, ruby))
+			{
+				// new rubinator i guess
+				// rubinator(tmp);
+			}
 		}
 
 		return tmp; // for now just empty spaces
 	}
+	sanitize rubinator(string s) {
+		sanitize r(s, cssRule("ruby", "", "")); // 
+		regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
+		string tmp{s}, tmp2{""};
+		// innerHTML = s;
+		cout << "Ruby text swapout time" << endl;
+		// sregex_iterator r(tmp.begin(), tmp.end(), ruby);
+		// for (auto const &b : *r)
+		// {
+		// 	cout << b << endl;
+		// }
+		string rbc{""}, rtc{""}; // strings for the eventual rb and rt elements, + another tmp
+		vector<string> rbv = {}, rtv = {}; // vectors for the things as we go through it
 
+		// the rough and tumble way to do this would be to just split them up by word and completely ignore
+
+		// stringstream o((*r)[1]); // make a stringstream from the first half (the ruby base)
+		// while(getline(o, tmp2, ' ')) {
+		// 	// go by word
+		// 	//
+		// }
+		return r;
+	}
+	
+	
+	// operator overloading
 	friend ostream &operator<<(ostream &, const sanitize &); // printing out the thing out
 	sanitize operator+=(const string &str)
 	{
@@ -326,10 +338,20 @@ public:
 		innerHTML += san.innerHTML;
 		return *this;
 	}
+	sanitize operator+=(const int &i) // ya we can += integers too
+	{
+		indent += i;
+		return *this;
+	}
+	sanitize operator-=(const int &i)
+	{
+		indent -= i;
+		return *this;
+	}
+
 	sanitize operator++()
 	{
 		indent++;
-		// indent++;
 		return *this;
 	}
 	sanitize operator++(int)
@@ -349,20 +371,22 @@ public:
 		operator--();
 		return o;
 	}
-	int length() { return indent + 1; }
+	int length() { return indent; }
 
 	void reset()
 	{
 		innerHTML = "";
 		rule = cssRule();
+		indent = !(parent == el);
 	}
 
 private:
-	string innerHTML{""};
+protected:
+	// string innerHTML{""};
 	cssRule rule;
 	bool hr{false}; // horizontal rule type tags
 	int indent{0};
-	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested
+	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested 
 };
 
 ostream &operator<<(ostream &os, const sanitize &san)
