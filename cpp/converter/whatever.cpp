@@ -13,10 +13,11 @@
 
 using namespace std;
 
-fstream raw, cleaned; // input/output streams
+fstream raw, cleaned, copier; // input/output streams + a copier to keep a copy of the original exported html n subsequently delete the original from the html-to-process folder
 stringstream sstr, sstr2;
-filesystem::directory_entry currFile{"html"}; // current file, initialized to the html folder
-vector<filesystem::directory_entry> entries;  // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
+const string htmlFolder{"html"};
+filesystem::directory_entry currFile{htmlFolder}; // current file, initialized to the html folder
+vector<filesystem::directory_entry> entries;	  // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
 vector<string> fileMaze{};
 vector<cssRule> stylesheet;
 vector<pair<string, cssRule>> prevEls;
@@ -36,6 +37,7 @@ void showEntries();
 void showMaze();
 void cleaner();
 pair<bool, cssRule> getRule(string &);
+pair<bool, cssRule> getRule(const string);
 pair<bool, cssRule> getRule(string &, string &, string &);
 void snip();
 void pushLine(vector<sanitize> &v);			// both pls && cleanLine are global, so this doesn't need to take those as args
@@ -45,26 +47,54 @@ string currentPath(); // returns the maze up to the current folder
 void makeDir();
 void open(filesystem::directory_entry); // opens up the cleaned thing
 
+void resetCurrentPath(filesystem::directory_entry e)
+{
+	//
+	if (e.path().has_parent_path())
+	{
+		fileMaze.clear(); // clear this out
+		if (!regex_search(e.path().parent_path().string(), regex(string("^" + htmlFolder + "$"))))
+		{
+			tmp3 = e.path().parent_path().string().substr(htmlFolder.length() + 1); // parent path
+			cout << tmp3 << " has more than just html as a parent. " << endl;
+			// cout << "this entry's parent path is Only html/" << endl;
+			int i{0};
+			sstr2.clear();
+			sstr2 << tmp3;
+			cout << "new folder structure: " << endl;
+			while (getline(sstr2, tmp2, '\\'))
+			{
+				
+				cout << "\"" << tmp2 << "\"" << endl;
+				if (tmp2 != htmlFolder)
+				{
+
+					fileMaze.push_back(tmp2); // remake this, n make sure NOT to include the html path
+				}
+			}
+		}
+	}
+}
+
 int main()
 {
 	cleaned << setfill('\t'); // set this to tabs
-	
+
 	showEntries();
 	explorer();
 	showMaze();
+	cout << "Current File is: " << currFile << endl;
 	// convertOpt = 3;
 	switch (convertOpt)
 	{
 	case 1:
 	{ // all files, but not sub-folders
 		cout << "Cleaning all files, but not sub-folders." << endl;
-		for (auto const &dir_entry : filesystem::directory_iterator{currentPath()})
+		resetCurrentPath(currFile); // since we're not doing sub-folders, this is enough
+		for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 		{
-			// if (!dir_entry.is_directory())
-			// {
 			currFile = dir_entry;
 			cleaner();
-			// }
 		}
 		break;
 	}
@@ -72,6 +102,22 @@ int main()
 	{
 		// all files AND sub-folders
 		cout << "Cleaning all files And sub-folders." << endl;
+		for (auto const &dir_entry : filesystem::recursive_directory_iterator{currFile})
+		{
+
+			resetCurrentPath(dir_entry); // this should be redone every time
+			if (!dir_entry.is_directory())
+			{
+				//
+				currFile = dir_entry;
+				cleaner();
+			}
+			else
+			{
+				cout << dir_entry << " is a folder." << endl;
+			}
+		}
+		break;
 	}
 	case 3:
 	{
@@ -127,8 +173,6 @@ void cleaner()
 	// vector<string> cssRules{};
 	// cleaned.open("output/test.html"); // just the test for now
 	cleaned.clear();
-	// cleaned << "hi? " << endl;
-	//
 	stylesheet.clear();
 
 	// go through the whole thing once
@@ -213,22 +257,12 @@ void cleaner()
 				break;
 			}
 
-			cout << "line: " << bodyLine << endl;
+			// cout << "line: " << bodyLine << endl;
 			cleanLine.clear();
 			trimAway = 0; // integer to let us know the index of the proper substring
 
 			bool prevClosing{false};
 			regex anyEl("^(<(.*?)>)");
-			// regex spanner("(<span\\sclass=\"(\\w|\\d|\\-)+\">)([^<]+)?(</span>)"); // picks the first span only
-
-			if (bodyLine == 62)
-			{
-				//
-				cout << "full untrimmed line: " << endl;
-				cout << untrimmed << endl;
-				cout << "pls: " << endl;
-				cout << pls << endl;
-			}
 
 			while (tmp != "")
 			{
@@ -272,29 +306,40 @@ void cleaner()
 					{
 						// can't be doing this if it's an orphaned closing tag
 
-						// having it match for anything that's not a < means it can also match for non-ascii characters
-						regex listStructure("<li>(.*)"); // closing tag optional; leave middle greedy n check the end for "</li>" to cut off after
-						regex_iterator cow(tmp.begin(), tmp.end(), listStructure);
-
-						innerHTML = (*cow)[1].str(); // extracts the inner stuff while keeping the ugly spans for now
+						snip();			 // cut off the <li>
+						innerHTML = tmp; // now that we snipped off the opening tag, we can just do this
 
 						if (regex_search(innerHTML, regex("</li>")))
 						{
-							// if there's an </li> at the end, cut it off
+							// if there's an </li> at the end, cut it off too
 							innerHTML = innerHTML.substr(0, innerHTML.length() - 5);
 						}
-						// else
-						// {
-						// 	cout << "this is a list item w/o a closing tag." << endl;
-						// }
 
-						// snip(); // we have to snip the <li> away before redeclaring the snip away bits, but After the innerHTML gets saved
+						// regex spanner("(<span\\sclass=\"(\\w|\\d|\\-)+\">)([^<]+)?(</span>)"); // picks the first span only
+						regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)"); // picks the first span only; full class name will be 2
+						if (regex_search(innerHTML, spanner))
+						{
+							// cout << "there are spans to take care of in here." << endl;
+							// cout << innerHTML << endl;
+							while (regex_search(innerHTML, spanner))
+							{
+
+								regex_iterator cow(innerHTML.begin(), innerHTML.end(), spanner);
+								// for (int i{0}; i < (*cow).size(); i++) {
+								const string currSpan{(*cow)[2].str()};
+								daRule = getRule(currSpan); // we can reuse this. i don't see why not
+								relevant = daRule.second;
+
+								innerHTML = regex_replace(innerHTML, regex((*cow)[0].str()), daRule.first ? relevant.printTag() : ""); // whether they get removed or simply printed differently depends on whether the span Matters
+								innerHTML = regex_replace(innerHTML, regex("</span>"), daRule.first ? relevant.printClose() : "");
+							}
+						}
 
 						regex spaces("^\\s+"); // get spaces from the start
 						// regex_match(untrimmed, smidge, spaces);
 						regex_token_iterator oi(untrimmed.begin(), untrimmed.end(), spaces);
-						cout << "this would be a setw(" << (*oi).str().length() << "); adding " << (floor((*oi).str().length() / 2) - 1) << endl;
-						cout << "pls currently has an indent of: " << pls.length() << endl;
+						// cout << "this would be a setw(" << (*oi).str().length() << "); adding " << (floor((*oi).str().length() / 2) - 1) << endl;
+						// cout << "pls currently has an indent of: " << pls.length() << endl;
 						pls += (floor((*oi).str().length() / 2) - 1); // add the indent. also floor it just in case
 
 						cleanLine << innerHTML;
@@ -307,11 +352,11 @@ void cleaner()
 					else
 					{
 						listSwitch = false;
-						cout << "break due to orphaned li." << endl;
+						// cout << "break due to orphaned li." << endl;
 						pls.reset(); // reset and do Not push it
 						break;
 					}
-					cout << "break due to unclosed list item." << endl;
+					// cout << "break due to unclosed list item." << endl;
 					pushLine(linear); // have to push this or else it will go missing
 					break;
 				}
@@ -341,6 +386,8 @@ void cleaner()
 					}
 					else
 					{
+						// listSwitch = false; // ...just in case...
+
 						string sneefer{("(<" + currentEl + "(.*?)>)(.*?)(</" + currentEl + ">)")}; // the inner html will be index 3 for this
 
 						// so if there is Anything relevant abt the class of the element we're currently working with
@@ -397,7 +444,7 @@ void cleaner()
 						}
 						else
 						{
-							cout << "break due to list switch stuffs." << endl;
+							// cout << "break due to list switch stuffs." << endl;
 							break; // break it if we're in list mode
 						}
 
@@ -411,7 +458,7 @@ void cleaner()
 					pushLine(linear, endling);
 					if (endling)
 					{
-						cout << "break due to endling." << endl;
+						// cout << "break due to endling." << endl;
 						break;
 					}
 				}
@@ -640,6 +687,25 @@ pair<bool, cssRule> getRule(string &str)
 	return make_pair(m, t);
 }
 
+pair<bool, cssRule> getRule(const string str)
+{
+	//
+	cssRule t;
+	bool m{false};
+	// pair<bool, cssRule> p;
+	for (auto r : stylesheet)
+	{
+		if (r.klass == str)
+		{
+			// cout << "located the class \"" << str << "\"." << endl;
+			t = r;
+			m = true;
+			break;
+		}
+	}
+	// p = make_pair(m, t);
+	return make_pair(m, t);
+}
 pair<bool, cssRule> getRule(string &e, string &c, string &g)
 {
 	// same as just the class but this time we specify other things lol
@@ -719,6 +785,9 @@ void pushLine(vector<sanitize> &v, bool c)
 string currentPath()
 {
 	string t{""};
+	// if (convertOpt == 3) {
+	// 	// if we're on the do only one version
+	// }
 	for (auto const &entry : fileMaze)
 	{
 		t += entry + "/";
