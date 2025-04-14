@@ -29,8 +29,8 @@ stringstream cleanLine;
 sanitize pls;
 
 smatch smidge;
-bool hasDirectory{false}, listSwitch{false};
-int convertOpt{0}, trimAway{0};
+bool hasDirectory{false}, listSwitch{false}, tableSwitch{false};
+int convertOpt{0}, trimAway{0}, tables{0};
 
 void explorer();
 void showEntries();
@@ -42,6 +42,7 @@ pair<bool, cssRule> getRule(string &, string &, string &);
 void snip();
 void pushLine(vector<sanitize> &v);			// both pls && cleanLine are global, so this doesn't need to take those as args
 void pushLine(vector<sanitize> &v, bool c); // conditional version
+void pushLine(sanitize &s, vector<sanitize> &v, bool c);
 
 string currentPath(); // returns the maze up to the current folder
 void makeDir();
@@ -64,7 +65,7 @@ void resetCurrentPath(filesystem::directory_entry e)
 			cout << "new folder structure: " << endl;
 			while (getline(sstr2, tmp2, '\\'))
 			{
-				
+
 				cout << "\"" << tmp2 << "\"" << endl;
 				if (tmp2 != htmlFolder)
 				{
@@ -124,7 +125,7 @@ int main()
 		// only some files
 		cout << "Choose a file or folder: ";
 		cin >> convertOpt;
-		while ((convertOpt < 1 || convertOpt >= entries.size()))
+		while ((convertOpt < 1 || convertOpt > entries.size()))
 		{
 			// make sure we've chosen an Actual Thing
 			cout << "Not Allowed. Try again: ";
@@ -135,6 +136,7 @@ int main()
 		if (currFile.is_directory())
 		{
 			// loop all
+			resetCurrentPath(currFile);
 			for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 			{
 				currFile = dir_entry;
@@ -160,12 +162,16 @@ void cleaner()
 	raw.open(currFile.path()); // open the raw
 	open(currFile);			   // open the output
 
+	sanitize *sanPtr = new sanitize;
+	// sanPtr -> pls;
+	// *sanPtr = pls;
+
 	// bool listSwitch{false}; // bool for list mode
 	bool styleSwitch{false}, bodySwitch{false}, bqtSwitch{false};
 	listSwitch = false;
 	// vector<string> lines{}; // actually let's just have a vector of the body lines. i think that'll make it easier to work with in the end
 	string parentEl{"ul"}; // parent element for list items
-	int bodyLine{0};
+	int bodyLine{0}, tables{0};
 
 	// vector<pair<string, cssRule>> linear;
 	vector<sanitize> linear;
@@ -288,15 +294,40 @@ void cleaner()
 				// cout << "currentEl: " << currentEl << "\t\t" << "currentClass: " << currentClass << endl;
 				pair<bool, cssRule> daRule = getRule(currentEl, currentClass, guts);
 				cssRule relevant = daRule.second;
-
 				bool endling{((currentEl == "p") && closing)}; // for now just closing paragraphs; will adjust as needed later
 				// it also does not include "li" bc those get handled separately n will break on their own, so it would be redundant to include them in endling
 
-				bool block{relevant.display != "inline"}, inList{(currentEl == "ol" || currentEl == "ul")};
+				// the way tables will be handled is that we should probably have another sanitize as "plsChild" to hold onto the tds, and have the main "pls" hold onto the trs
+				// if (tableSwitch) {
+				// 	parentEl = "table";
+				// }
+
+				// tableSwitch = (relevant.display == "table");
+				bool block{relevant.display != "inline"}, inList{(currentEl == "ol" || currentEl == "ul")}, inRow{currentEl == "tr"};
+				// tableSwitch = ((currentEl == "table" || currentEl == "th" || currentEl == "tbody" || currentEl == "thead" || currentEl == "td" || currentEl == "tr")); // set this appropriately
 
 				if (block) // so. technically this just means "not an inline"
 				{
-					pls = sanitize("", cssRule((listSwitch ? parentEl : relevant.parent), currentClass, relevant.guts));
+					cout << "relevant.el: " << relevant.el << "\t\trelevant.display: " << relevant.display << endl;
+					pls = sanitize("", cssRule(((listSwitch || tableSwitch) ? parentEl : relevant.parent), currentClass, (relevant.guts != currentEl ? relevant.guts : ""))); // make sure that the guts aren't just the same as the current el, to avoid accidentally doubling up on that 
+				}
+				
+				if (inRow)
+				{
+					// cout << "in a <tr>" << endl;
+					// more determinations
+					if (closing)
+					{
+						// if it's a closing <tr>, then probably just push pls to linear n break huh.
+						pls.setIndex(tables); // set the index
+						pushLine(linear);
+					}
+					// else
+					// {
+					// 	// cout << "makin da ~table~ sanitize" << endl;
+					// 	pls = sanitize("", cssRule("table", currentClass, "")); // make it as a table, and don't use the guts bc that's how we double up on trtr
+					// }
+					break; // trs are always solo lines so don't bother processing the rest of this loop
 				}
 
 				if (currentEl == "li")
@@ -360,12 +391,38 @@ void cleaner()
 					pushLine(linear); // have to push this or else it will go missing
 					break;
 				}
+				else if (currentEl == "td") // table handling
+				{
+					if (!closing)
+					{
+						// if it's not closing, then we turn some switch on or off or w/e
+						tableSwitch = true;
+					}
+					else
+					{
+						// otherwise, closing td gets added to the pls, closing tr gets pushed to linear, n we do some switching stuff
+						tableSwitch = false;
+						(*sanPtr) += cleanLine; // 
+
+						// pls += (*sanPtr).printTag(); // add the opening tag
+						pls += *sanPtr; // add the sanPtr to pls
+						// pls += (*sanPtr).printClose(); // add the closing tag
+						// pls.rowCells = (*sanPtr).rowCells;
+
+						// cout << "completed a td; pls: " << pls << "\n*sanPtr: " << (*sanPtr) << endl;
+						(*sanPtr).reset();
+					}
+					// cout <<
+					(*sanPtr).el = currentEl;
+
+					break; // and then end it
+				}
 				else if (currentEl != "")
 				{
 					// cout << "\n\nCURRENT EL: " << currentEl << endl;
 					if (closing)
 					{
-						if (!endling)
+						if (!endling || tableSwitch) // if we're in a table, then you should be adding the end tag to it anyway
 						{
 							// cout << "prevEl: " << prevEl << endl;
 							cleanLine << full;
@@ -384,9 +441,16 @@ void cleaner()
 						listSwitch = true;	  // turn list mode on
 						parentEl = currentEl; // and save which kind of list it was
 					}
+					else if (currentEl == "table")
+					{
+						cout << "ooo we are in a tableeee" << endl;
+						parentEl = currentEl;
+						tables++; // increment this
+						break;
+					}
 					else
 					{
-						// listSwitch = false; // ...just in case...
+						listSwitch = false; // ...just in case...
 
 						string sneefer{("(<" + currentEl + "(.*?)>)(.*?)(</" + currentEl + ">)")}; // the inner html will be index 3 for this
 
@@ -434,6 +498,7 @@ void cleaner()
 					if (!closing) // shouldn't have to deal with this anymore, but we'll see still
 					{
 						cout << "...but smth weird happened.\n\t" << tmp << endl;
+						cout << "currentEl: " << currentEl << " full: " << full << endl;
 						if (tmp.length() <= 1)
 						{
 							tmp = "";
@@ -441,6 +506,7 @@ void cleaner()
 						else if (!listSwitch)
 						{
 							cleanLine << full; // we'll fix this up more later when working with those wretched list items
+							cout << pls << endl;
 						}
 						else
 						{
@@ -455,8 +521,8 @@ void cleaner()
 
 				if (closing)
 				{
-					pushLine(linear, endling);
-					if (endling)
+					pushLine((tableSwitch ? (*sanPtr) : pls), linear, endling && !tableSwitch); // add it to the pointer if tableSwitch is on
+					if (endling && !tableSwitch)												// adding in the Not tableSwitch means that it also gets to finish putting stuff into the td
 					{
 						// cout << "break due to endling." << endl;
 						break;
@@ -497,6 +563,13 @@ void cleaner()
 		{
 			next = linear[i + 1];
 		}
+		
+		// open the table
+		if (current.tableIndex != prev.tableIndex) {
+			cleaned << current.printParent() << endl; // print the <table>
+		}
+		
+		// open the blockquote
 		if (current.bqtMode)
 		{
 			// so if we're currently in blockquote mode
@@ -506,6 +579,7 @@ void cleaner()
 				cleaned << current.printParent() << endl;
 			}
 		}
+		// open up the list
 		if (current.listMode)
 		{
 			int first{prev.length()}, second{current.length()};
@@ -523,14 +597,17 @@ void cleaner()
 				}
 			}
 		}
+		// tab our shit
 		if (current.length() > 0)
 		{
 			// now we print our tabs
 			cleaned << setw(current.length()) << "";
 		}
 
+		// print the element
 		cleaned << current << endl;
 
+		// close the list
 		if (current.listMode)
 		{
 			int first{next.length()}, second{current.length()};
@@ -549,6 +626,7 @@ void cleaner()
 			}
 		}
 
+		// close the blockquote
 		if (current.bqtMode)
 		{
 			if (!next.bqtMode)
@@ -556,10 +634,18 @@ void cleaner()
 				cleaned << current.closeParent() << endl;
 			}
 		}
+
+		// close the table
+		if (next.tableIndex != current.tableIndex) {
+			cleaned << current.closeParent() << endl; // print the </table>
+		}
 	}
 
 	raw.close(); // close the streaaaaams
 	cleaned.close();
+
+	sanPtr = nullptr;
+	delete sanPtr;
 }
 
 void explorer() // transforms convertOpt
@@ -697,7 +783,6 @@ pair<bool, cssRule> getRule(const string str)
 	{
 		if (r.klass == str)
 		{
-			// cout << "located the class \"" << str << "\"." << endl;
 			t = r;
 			m = true;
 			break;
@@ -711,18 +796,15 @@ pair<bool, cssRule> getRule(string &e, string &c, string &g)
 	// same as just the class but this time we specify other things lol
 	cssRule t(e, c, g);
 	bool m{false};
-	// pair<bool, cssRule> p;
 	for (auto r : stylesheet)
 	{
 		if (r.klass == c)
 		{
-			// cout << "located the class \"" << str << "\"." << endl;
 			t = r;
 			m = true;
 			break;
 		}
 	}
-	// p = make_pair(m, t);
 	return make_pair(m, t);
 }
 
@@ -730,21 +812,11 @@ void snip()
 {
 	try
 	{
-
-		// if (listSwitch)
-		// {
-		// 	cout << "(supposedly) trimming a list item." << endl;
-		// 	// cout << *cow << endl;
-		// }
 		tmp.erase(tmp.begin(), tmp.begin() + trimAway);
-
-		// cout << tmp << endl;
 	}
 	catch (out_of_range)
 	{
 		cout << "out of range!!" << endl;
-		// cout << e.what();
-		// break;
 		tmp = "";
 	}
 }
@@ -752,8 +824,7 @@ void snip()
 void pushLine(vector<sanitize> &v)
 {
 	pls += cleanLine; // add the inner HTML to the pls
-	// cout << "break due to list item." << endl;
-	// cout << pls << endl;
+	
 	// clear the line Before we break the thing
 	stringstream whee("");
 	cleanLine.swap(whee); // can we just. clear it like that.
@@ -763,31 +834,25 @@ void pushLine(vector<sanitize> &v)
 
 void pushLine(vector<sanitize> &v, bool c)
 {
-	pls += cleanLine; // add the inner HTML to the pls
-	// clear the line Before we break the thing
+	pushLine(pls, v, c); // ...it really just is just "pls by default" here lol
+}
+
+void pushLine(sanitize &s, vector<sanitize> &v, bool c)
+{
+	s += cleanLine;
+	// cout << "s: " << s << endl; // add innerHTML to the sanitize
 	stringstream whee("");
 	cleanLine.swap(whee); // can we just. clear it like that.
 	if (c)				  // if tmp is empty or we're closing a paragraph
 	{
-		v.push_back(pls);
-		pls.reset();
+		v.push_back(s);
+		s.reset();
 	}
 }
-
-// void tabulate(sanitize &a, sanitize &b)
-// {
-// 	if (a.length() < b.length() && a.listMode)
-// 	{
-// 		//
-// 	}
-// }
 
 string currentPath()
 {
 	string t{""};
-	// if (convertOpt == 3) {
-	// 	// if we're on the do only one version
-	// }
 	for (auto const &entry : fileMaze)
 	{
 		t += entry + "/";

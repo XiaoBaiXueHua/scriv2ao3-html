@@ -63,7 +63,15 @@ public:
 		}
 		if (el != "span")
 		{
-			display = "block";
+			if (el == "table" || el == "th" || el == "tbody" || el == "thead" || el == "td" || el == "tr")
+			{
+				// and now if we're working w/table elements
+				display = "table";
+			}
+			else
+			{
+				display = "block";
+			}
 		}
 		// cout << "el: " << el << "\t\tklass: " << klass << "\trulez: " << rulez << endl
 		//  << endl;
@@ -114,16 +122,16 @@ public:
 					}
 				}
 			}
+		}
+		if ((el == "blockquote") || (el == "ul") || (el == "ol"))
+		{
+			parentage = true;
+		}
 
-			if ((el == "blockquote") || (el == "ul") || (el == "ol")) {
-				parentage = true; 
-			}
-
-			// turning the list mode on depending on the element
-			if ((el == "ul") || (el == "ol"))
-			{
-				listMode = true;
-			}
+		// turning the list mode on depending on the element
+		if ((el == "ul") || (el == "ol"))
+		{
+			listMode = true;
 		}
 	}
 	cssRule(string e, string c, string g)
@@ -151,24 +159,43 @@ public:
 			el = "li";
 			listMode = true;
 		}
+		else if (el == "table")
+		{
+			el = "tr";
+			display = "table";
+		}
+		if (el != parent)
+		{
+			parentage = true; // idk. might be useful later i suppose
+		}
+	}
+	void init()
+	{
+		//
 	}
 
 	string printTag() { return "<" + el + guts + ">"; }
 	string printClose() { return "</" + el + ">"; }
 	string printParent() { return "<" + parent + ">"; }
 	string closeParent() { return "</" + parent + ">"; }
+	void setIndex(int i)
+	{
+		tableIndex = i; // ...we have to do it this way bc the ++ and -- operators are for the indents. ehe
+	}
 
 	// fuck it. everyone's public
 	string el{""}, klass{""}, rulez{""}, display{"inline"}, guts{""}, parent{""}; // "parent" is used for things like blockquotes n lists, which have important nesting happening
 
 	bool bqtMode{false}, listMode{false}, fsSpecified{false}, worthwhile{false}, parentage{false}; // booleans for when we're working w/blockquotes n stuff
 
+	int tableIndex{0}; // in case we have adjacent tables, this keeps track of which one we're on
+
 	float fontSize{0.0}; // measured in rems
 
 private:
 	// int indent{0};
 protected:
-string innerHTML{""};
+	string innerHTML{""};
 };
 
 class sanitize : public cssRule
@@ -281,18 +308,21 @@ public:
 			}
 
 			regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
-			// and then perhaps finally, ruby textW
+			// and then perhaps finally, ruby text
 			if (regex_search(tmp, ruby))
 			{
 				// new rubinator i guess
 				// rubinator(tmp);
 			}
+
+			// then, once all that's been done, we also print out the children
 		}
 
 		return tmp; // for now just empty spaces
 	}
-	sanitize rubinator(string s) {
-		sanitize r(s, cssRule("ruby", "", "")); // 
+	sanitize rubinator(string s)
+	{
+		sanitize r(s, cssRule("ruby", "", ""));	 //
 		regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
 		string tmp{s}, tmp2{""};
 		// innerHTML = s;
@@ -302,7 +332,7 @@ public:
 		// {
 		// 	cout << b << endl;
 		// }
-		string rbc{""}, rtc{""}; // strings for the eventual rb and rt elements, + another tmp
+		string rbc{""}, rtc{""};		   // strings for the eventual rb and rt elements, + another tmp
 		vector<string> rbv = {}, rtv = {}; // vectors for the things as we go through it
 
 		// the rough and tumble way to do this would be to just split them up by word and completely ignore
@@ -314,8 +344,14 @@ public:
 		// }
 		return r;
 	}
-	
-	
+
+	string str()
+	{
+		stringstream wa("");
+		wa << *this;
+		return wa.str(); // stringify the clean html lol
+	}
+
 	// operator overloading
 	friend ostream &operator<<(ostream &, const sanitize &); // printing out the thing out
 	sanitize operator+=(const string &str)
@@ -333,9 +369,11 @@ public:
 		innerHTML += str.str();
 		return *this;
 	};
-	sanitize operator+=(const sanitize &san)
+	sanitize operator+=(const sanitize &san) // when adding two sanitizes together, you're nesting one inside the other
 	{
-		innerHTML += san.innerHTML;
+		sanitize copy(san);
+		innerHTML += copy.printTag() + san.innerHTML + copy.printClose(); // maybe should also have this be a cleaned up version? so that if we continue this nesting nonsense, those children also end up properly tabbed as well
+		indeces.push_back(copy.size());									  // and then also add the index of the child... later probably also make it acct for when mixing strings and elements
 		return *this;
 	}
 	sanitize operator+=(const int &i) // ya we can += integers too
@@ -372,12 +410,23 @@ public:
 		return o;
 	}
 	int length() { return indent; }
-
+	int size() // about to do some Insane Shit i'm sure but anyway where length() gets the indent, size() gets the string length
+	{
+		stringstream nya("");
+		nya << *this;
+		return nya.str().length();
+	}
+	// void incCells() { rowCells++; }
+	// void clearCells() {
+	// 	rowCells = 0;
+	// }
 	void reset()
 	{
 		innerHTML = "";
 		rule = cssRule();
 		indent = !(parent == el);
+		tableIndex = 0;
+		indeces = {0}; // reset this
 	}
 
 private:
@@ -385,20 +434,64 @@ protected:
 	// string innerHTML{""};
 	cssRule rule;
 	bool hr{false}; // horizontal rule type tags
-	int indent{0};
-	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested 
+	int indent{0};	// rowCells for knowing the number of children a <tr> has
+
+	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested
+
+	// this is kind of hacked together for the moment, but it works for how the sanitizer currently functions
+	vector<int> indeces{0}; // starting index is always 0
 };
 
 ostream &operator<<(ostream &os, const sanitize &san)
 {
 	sanitize copy(san);
-	string nya{copy.cleanup()}; // sanitized version of the otherwise raw innerHTML
+	string nya{copy.cleanup()};
+	os << setfill('\t');
 	if (!copy.hr)
 	{
-		nya = copy.printTag() + nya + copy.printClose();
+		os << copy.printTag();
+	}
+	if (copy.indeces.size() > 1)
+	{
+		// cout << "this " << copy.printTag() << " has " << copy.indeces.size() << " children." << endl;
+		// if there are child elements, then slice them up
+		int i{0}; // keeps track of where in the string we currently are
+		for (int j{0}; j < copy.indeces.size(); j++)
+		{
+			if (copy.indeces[j] > 0) // prevent it from printing useless tabs n stuff
+			{
+				os << endl;						   // start a new line
+				os << setw(copy.indent + 1) << ""; // tab it
+				os << nya.substr(i, copy.indeces[j]);
+			}
+			i += copy.indeces[j]; // add this for the next loop's starting point
+		}
+		os << endl
+		   << setw(copy.indent) << ""; // and then tab it in preparation for the closing tag
+	}
+	else
+	{
+		// otherwise, just print it as it is
+		os << nya;
 	}
 
-	os << nya;
+	if (!copy.hr)
+	{
+		os << copy.printClose();
+	}
+	// string nya{copy.cleanup()}; // sanitized version of the otherwise raw innerHTML
+	// if (!copy.hr)
+	// {
+	// 	nya = copy.printTag() + nya + copy.printClose();
+	// }
+
+	// os << nya;
 
 	return os;
 }
+// sanitize &operator<<(sanitize &san, const ostream &os) {
+// 	// uhhhh y'know i really did not think i'd get this far.
+// 	sanitize copy(san);
+// 	copy << os;
+// 	return copy;
+// }
