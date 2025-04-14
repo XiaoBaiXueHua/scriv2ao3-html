@@ -123,7 +123,7 @@ public:
 				}
 			}
 		}
-		
+
 		if ((el == "blockquote") || (el == "ul") || (el == "ol"))
 		{
 			parentage = true;
@@ -207,6 +207,7 @@ public:
 
 	void init(string s)
 	{
+
 		if (parent != el)
 		{
 			indent = 1;
@@ -217,12 +218,12 @@ public:
 	string cleanup()
 	{
 		string tmp = innerHTML; // leave the actual inner html untouched
-		if (hr || tmp == "~***~")
+		if (hr || tmp == sanitize::hrStr)
 		{
 			hr = true;
 			tmp = "<hr />";
 		}
-		else if ((tmp == "") || regex_search(tmp, regex("^(<(em|strong)>)*(\\s+|<br\\s?/>)(</(em|strong)>)*$")))
+		else if ((tmp == "") || regex_search(tmp, regex("^(<(em|strong)>)*(\\s+|<br\\s?/?>)(</(em|strong)>)*$")))
 		{
 			// so if it's an empty string or just spaces
 			tmp = "&nbsp;"; // replace it with this nbsp
@@ -405,10 +406,7 @@ public:
 		nya << *this;
 		return nya.str().length();
 	}
-	// void incCells() { rowCells++; }
-	// void clearCells() {
-	// 	rowCells = 0;
-	// }
+	
 	void reset()
 	{
 		innerHTML = "";
@@ -417,6 +415,10 @@ public:
 		tableIndex = 0;
 		indeces = {0}; // reset this
 	}
+
+	static bool prettify;
+	static char fill;
+	static string hrStr;
 
 private:
 protected:
@@ -435,18 +437,17 @@ ostream &operator<<(ostream &os, const sanitize &san)
 {
 	sanitize copy(san);
 	string nya{copy.cleanup()};
-	os << setfill('\t');
+	os << setfill(sanitize::fill);
 	if (!copy.hr)
 	{
 		os << copy.printTag();
 	}
-	if (copy.indeces.size() > 1)
+	if (copy.indeces.size() > 1 && sanitize::prettify)
 	{
 		if (copy.hr) {
 			cout << "ohh. hmm. i suspect we were not supposed to splitter this. yet here we are, doing it anyway." << endl;
 		}
-		// cout << "this " << copy.printTag() << " has " << copy.indeces.size() << " children." << endl;
-		// if there are child elements, then slice them up
+		
 		int i{0}; // keeps track of where in the string we currently are
 		for (int j{0}; j < copy.indeces.size(); j++)
 		{
@@ -471,19 +472,11 @@ ostream &operator<<(ostream &os, const sanitize &san)
 	{
 		os << copy.printClose();
 	}
-	// string nya{copy.cleanup()}; // sanitized version of the otherwise raw innerHTML
-	// if (!copy.hr)
-	// {
-	// 	nya = copy.printTag() + nya + copy.printClose();
-	// }
-
-	// os << nya;
 
 	return os;
 }
-// sanitize &operator<<(sanitize &san, const ostream &os) {
-// 	// uhhhh y'know i really did not think i'd get this far.
-// 	sanitize copy(san);
-// 	copy << os;
-// 	return copy;
-// }
+
+// initialize the statics
+bool sanitize::prettify = true;
+char sanitize::fill = '\t';
+string sanitize::hrStr = "~***~";

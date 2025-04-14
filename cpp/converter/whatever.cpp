@@ -12,6 +12,10 @@
 
 using namespace std;
 
+// configuration vars
+bool configured{false}, prettify{true}, navigator{false}, recursive{false}, consolidate{false}, copysrc{false}, deletesrc{false};
+char setf('\t');
+
 fstream raw, cleaned, copier; // input/output streams + a copier to keep a copy of the original exported html n subsequently delete the original from the html-to-process folder
 stringstream sstr, sstr2;
 const string htmlFolder{"html"};
@@ -19,7 +23,6 @@ filesystem::directory_entry currFile{htmlFolder}; // current file, initialized t
 vector<filesystem::directory_entry> entries;	  // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
 vector<string> fileMaze{};
 vector<cssRule> stylesheet;
-vector<pair<string, cssRule>> prevEls;
 string tmp{""}, tmp2{""}, tmp3{""};
 string innerHTML{""};
 string full{""}, guts{""};
@@ -32,6 +35,8 @@ bool hasDirectory{false}, listSwitch{false}, tableSwitch{false};
 int convertOpt{0}, trimAway{0}, tables{0};
 
 void explorer();
+void resetEntries();
+void resetEntries(bool);
 void showEntries();
 void showMaze();
 void cleaner();
@@ -76,14 +81,35 @@ void resetCurrentPath(filesystem::directory_entry e)
 	}
 }
 
+void configure()
+{
+	fstream c("scriv2ao3.config");
+	if (c.is_open())
+	{
+		// if it opens
+		cout << "...configuring..." << endl;
+		resetEntries(true); // silently initialize the entry vector
+		configured = true;
+		convertOpt = 3;
+	}
+}
+
 int main()
 {
-	cleaned << setfill('\t'); // set this to tabs
+	configure(); // configure first n foremost
 
-	showEntries();
-	explorer();
-	showMaze();
-	cout << "Current File is: " << currFile << endl;
+	cleaned << setfill(setf); // set this to tabs
+	sanitize::prettify = prettify;
+	sanitize::fill = setf;
+
+	if (!configured)
+	{
+		// if it's not been configured, then naturally we will show the entries n options n stuff
+		showEntries();
+		explorer();
+		showMaze();
+	}
+	// cout << "Current File is: " << currFile << endl;
 	// convertOpt = 3;
 	switch (convertOpt)
 	{
@@ -121,6 +147,7 @@ int main()
 	}
 	case 3:
 	{
+		resetEntries();
 		// only some files
 		cout << "Choose a file or folder: ";
 		cin >> convertOpt;
@@ -502,7 +529,6 @@ void cleaner()
 						break;
 					}
 				}
-
 			}
 		}
 
@@ -679,42 +705,58 @@ void explorer() // transforms convertOpt
 	}
 }
 
-void showEntries()
+void resetEntries()
 {
+	resetEntries(false); // default is verbose
+}
+void resetEntries(bool silence)
+{
+	if (!silence) {
+		cout << "currFile: " << currFile << endl;
+	}
 	entries.clear();	  // start by clearing out the vector for display things
 	hasDirectory = false; // reset this
 	int numFiles{0};
-	if (!currFile.path().empty())
+	for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 	{
-		for (auto const &dir_entry : filesystem::directory_iterator{currFile})
+		filesystem::path currPath{dir_entry.path()};
+		if ((dir_entry.is_directory() && !regex_search(currPath.string(), regex("_files$"))) || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
 		{
-			filesystem::path currPath{dir_entry.path()};
-			if ((dir_entry.is_directory() && !regex_search(currPath.string(), regex("_files$"))) || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
+			if (dir_entry.is_directory())
 			{
-				if (dir_entry.is_directory())
-				{
-					hasDirectory = true;
-				}
-				entries.push_back(dir_entry);
-				numFiles++;
-				std::cout << setw(15) << numFiles << ". " << currPath.filename() << (dir_entry.is_directory() ? " (directory)" : "") << endl;
+				hasDirectory = true;
+			}
+			entries.push_back(dir_entry);
+			numFiles++;
+			if (!silence)
+			{
+				cout << setw(15) << numFiles << ". " << currPath.filename() << (dir_entry.is_directory() ? " (directory)" : "") << endl; // print this if not supposed to be silent
 			}
 		}
+	}
+}
+
+void showEntries()
+{
+	resetEntries();
+	if (!currFile.path().empty() && entries.size() > 0)
+	{
 		// project::center(50, "~~~ Options ~~~ ");
-		std::cout << "\t1. Convert all files (but not sub-folders)." << endl;
-		std::cout << "\t2. Convert all files and sub-folder files." << endl;
-		std::cout << "\t3. Convert only some of the files shown." << endl;
+		cout << "\t1. Convert all files (but not sub-folders)." << endl;
+		cout << "\t2. Convert all files and sub-folder files." << endl;
+		cout << "\t3. Convert only some of the files shown." << endl;
 		if (hasDirectory)
 		{
-			std::cout << "\t4. Look through one of the sub-folders listed." << endl;
+			cout << "\t4. Look through one of the sub-folders listed." << endl;
 		}
 
 		// cout << "\t4. " << (hasDirectory ? "Look through one of the sub-folders listed." : "Go back to the previous folder.") << endl;
-		std::cout << "\t> ";
+		cout << "\t> ";
 	}
 	else
 	{
 		cout << "Hey!! This thing's empty!!!!!!!!!!!!!!!!" << endl;
+		exit(0);
 	}
 }
 
