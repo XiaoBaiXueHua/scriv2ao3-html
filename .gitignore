@@ -39,6 +39,7 @@
 # artifacts of creation
 **/output/**
 **/html/**
+**/converted/**
 **/tmp/*
 **/log.txt
 
