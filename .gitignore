@@ -44,4 +44,5 @@
 **/log.txt
 
 # Stuff I just want to keep private
+*.config
 **/private
