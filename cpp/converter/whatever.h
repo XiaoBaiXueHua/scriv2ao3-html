@@ -123,6 +123,7 @@ public:
 				}
 			}
 		}
+		
 		if ((el == "blockquote") || (el == "ul") || (el == "ol"))
 		{
 			parentage = true;
@@ -141,12 +142,6 @@ public:
 		klass = c;
 		guts = g;
 		parent = el;
-		// if (el == "blockquote" || el == "ol" || el == "ul")
-		// {
-		// 	parentage = true;
-		// 	// parent = el;
-		// 	// indent++;
-		// }
 
 		if (el == "blockquote")
 		{
@@ -164,14 +159,8 @@ public:
 			el = "tr";
 			display = "table";
 		}
-		if (el != parent)
-		{
-			parentage = true; // idk. might be useful later i suppose
-		}
-	}
-	void init()
-	{
-		//
+
+		parentage = (el != parent); // idk. might be useful later i suppose
 	}
 
 	string printTag() { return "<" + el + guts + ">"; }
@@ -453,6 +442,9 @@ ostream &operator<<(ostream &os, const sanitize &san)
 	}
 	if (copy.indeces.size() > 1)
 	{
+		if (copy.hr) {
+			cout << "ohh. hmm. i suspect we were not supposed to splitter this. yet here we are, doing it anyway." << endl;
+		}
 		// cout << "this " << copy.printTag() << " has " << copy.indeces.size() << " children." << endl;
 		// if there are child elements, then slice them up
 		int i{0}; // keeps track of where in the string we currently are
