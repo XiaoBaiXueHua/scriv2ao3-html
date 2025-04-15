@@ -218,7 +218,7 @@ public:
 	string cleanup()
 	{
 		string tmp = innerHTML; // leave the actual inner html untouched
-		if (hr || tmp == sanitize::hrStr)
+		if (hr || regex_search(tmp, regex(string("^(<.*?>)*?" + sanitize::hrStr + "(<.*?>)*?$"))))
 		{
 			hr = true;
 			tmp = "<hr />";
@@ -230,82 +230,33 @@ public:
 		}
 		else
 		{
-			// fix nesting issues
-			// first swap the order of consecutive <strong><em>s
-
-			regex misnested("<strong><em>"); // just hard code it for now i suppose
-			if (regex_search(tmp, misnested))
+			if (rawSize() > 8192)
 			{
-				while (regex_search(tmp, misnested))
-				{
-					tmp = regex_replace(tmp, misnested, "<em><strong>");
+				string cleanTmp{""};
+				// vector<string> splits = {};
+				cout << "\n\nhi... this thing is like, " << rawSize() << " chars long so. we're gonna skip the sanitization rn to prevent segmentation errors." << endl;
+				// debug(); // and then debug it
+				long unsigned int i{0}, spacer{2048}; 
+				while (i < rawSize()) {
+					// let's do this in nice safe increments of 2048
+					// string sub{tmp.substr(i, i + 2048)};
+					// sub = ;
+					string sub{tmp.substr(i, i + spacer)};
+					// then do some checks to make sure we're not splitting up any escape codes
+					cleanTmp += findAndSanitize(sub);
+					i += sub.length(); 
 				}
-
-				// now the closing tags
-				misnested = "</em></strong>";
-				while (regex_search(tmp, misnested))
-				{
-					tmp = regex_replace(tmp, misnested, "</strong></em>");
-				}
+				// then add the last bit back on
+				// cleanTmp += findAndSanitize(tmp.substr(i, r));
+				// sub = tmp.substr(i);
+				// cleanTmp += findAndSanitize(sub);
+				tmp.clear(); // clear it out first maybe?
+				tmp = cleanTmp; // set it to this
 			}
-
-			// make the regex
-			string ack{""};
-			for (int i{0}; i < unnestings.size(); i++)
+			else
 			{
-				string e{unnestings[i]};
-				ack += "</" + e + "><" + e + ">";
-				if (i < unnestings.size() - 1)
-				{
-					ack += "|"; // add the pipe as well
-				}
+				tmp = findAndSanitize(tmp);
 			}
-			ack = "(" + ack + ")"; // stick it all into a parenthetical
-
-			// then actually search and replace
-			regex guh(ack);
-			if (regex_search(tmp, guh))
-			{
-				while (regex_search(tmp, guh))
-				{
-					tmp = regex_replace(tmp, guh, "");
-				}
-			}
-
-			if (regex_search(tmp, regex("&#\\d+;")))
-			{
-				// loop through and cleanup any sort of &#numbers; html code things
-
-				regex aiya{"(&#(\\d+);)(.)?"}; // this reults in 0 = full thing, 1 = just the numbers, and then 2 = whatever comes after
-				while (regex_search(tmp, regex("&#\\d+;")))
-				{
-					sregex_iterator oi{tmp.begin(), tmp.end(), aiya};
-					sregex_iterator end;
-					while (oi != end)
-					{
-						regex rpls(string((*oi)[1].str())); // should be the full thing
-						int num{stoi(string((*oi)[2].str()))};
-						string m{char(num)};
-						if (num == 60 && string((*oi)[1].str()) == "3")
-						{
-							// if it's a gt sign & followed by a 3
-							m = "&gt;"; // make it a gt instead
-						}
-						tmp = regex_replace(tmp, rpls, m);
-						oi++;
-					}
-				}
-			}
-
-			regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
-			// and then perhaps finally, ruby text
-			if (regex_search(tmp, ruby))
-			{
-				// new rubinator i guess
-				// rubinator(tmp);
-			}
-
-			// then, once all that's been done, we also print out the children
 		}
 
 		return tmp; // for now just empty spaces
@@ -334,14 +285,108 @@ public:
 		// }
 		return r;
 	}
+	string findAndSanitize(string &str)
+	{
+		string tmp{str};
+		// fix nesting issues
+		// first swap the order of consecutive <strong><em>s
 
+		regex misnested("<strong><em>"); // just hard code it for now i suppose
+		if (regex_search(tmp, misnested))
+		{
+			while (regex_search(tmp, misnested))
+			{
+				tmp = regex_replace(tmp, misnested, "<em><strong>");
+			}
+
+			// now the closing tags
+			misnested = "</em></strong>";
+			while (regex_search(tmp, misnested))
+			{
+				tmp = regex_replace(tmp, misnested, "</strong></em>");
+			}
+		}
+
+		// make the regex
+		string ack{""};
+		for (int i{0}; i < unnestings.size(); i++)
+		{
+			string e{unnestings[i]};
+			ack += "</" + e + "><" + e + ">";
+			if (i < unnestings.size() - 1)
+			{
+				ack += "|"; // add the pipe as well
+			}
+		}
+		ack = "(" + ack + ")"; // stick it all into a parenthetical
+
+		// then actually search and replace
+		regex guh(ack);
+		if (regex_search(tmp, guh))
+		{
+			while (regex_search(tmp, guh))
+			{
+				tmp = regex_replace(tmp, guh, "");
+			}
+		}
+
+		if (regex_search(tmp, regex("&#\\d+;")))
+		{
+			// loop through and cleanup any sort of &#numbers; html code things
+
+			regex aiya{"(&#(\\d+);)(.)?"}; // this reults in 0 = full thing, 1 = just the numbers, and then 2 = whatever comes after
+			while (regex_search(tmp, aiya))
+			{
+				sregex_iterator oi{tmp.begin(), tmp.end(), aiya};
+				sregex_iterator end;
+				while (oi != end)
+				{
+					regex rpls(string((*oi)[1].str())); // should be the full thing
+					int num{stoi(string((*oi)[2].str()))};
+					string m{char(num)};
+					if (num == 60 && string((*oi)[1].str()) == "3")
+					{
+						// if it's a gt sign & followed by a 3
+						m = "&gt;"; // make it a gt instead
+					}
+					tmp = regex_replace(tmp, rpls, m);
+					oi++;
+				}
+			}
+		}
+
+		regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
+		// and then perhaps finally, ruby text
+		if (regex_search(tmp, ruby))
+		{
+			// new rubinator i guess
+			// rubinator(tmp);
+		}
+		return tmp;
+	}
 	string str()
 	{
 		stringstream wa("");
 		wa << *this;
 		return wa.str(); // stringify the clean html lol
 	}
+	void debug()
+	{
+		// print out all the vars
+		cout << "----------------\n\n\nDEBUGGING..." << endl
+			 << endl;
+		cout << "INHERITED FROM cssRule:" << endl;
+		cout << "STRINGS:" << endl;
+		cout << "el: " << el << "\tklass: " << klass << "\tdisplay: " << display << endl;
+		cout << "parent: " << parent << "\tguts: " << guts << endl;
+		cout << "BOOLS:" << endl;
+		cout << "bqtMode: " << bqtMode << "\tlistMode: " << listMode << "\tfsSpecified: " << fsSpecified << "\tworthwhile: " << worthwhile << "\tparentage: " << parentage << endl;
+		cout << "NUMBERS: " << endl;
+		cout << "length: " << length() << "\traw size: " << rawSize() << endl
+			 << endl;
 
+		cout << "innerHTML:\n\t" << innerHTML << endl;
+	}
 	// operator overloading
 	friend ostream &operator<<(ostream &, const sanitize &); // printing out the thing out
 	sanitize operator+=(const string &str)
@@ -399,14 +444,18 @@ public:
 		operator--();
 		return o;
 	}
-	int length() { return indent; }
-	int size() // about to do some Insane Shit i'm sure but anyway where length() gets the indent, size() gets the string length
+	long unsigned int length() { return indent; }
+	long unsigned int size() // about to do some Insane Shit i'm sure but anyway where length() gets the indent, size() gets the string length
 	{
 		stringstream nya("");
 		nya << *this;
 		return nya.str().length();
 	}
-	
+	long unsigned int rawSize()
+	{
+		return innerHTML.length();
+	}
+
 	void reset()
 	{
 		innerHTML = "";
@@ -436,7 +485,7 @@ protected:
 ostream &operator<<(ostream &os, const sanitize &san)
 {
 	sanitize copy(san);
-	string nya{copy.cleanup()};
+	string nya{copy.cleanup()}; // might have to make this a stringstream
 	os << setfill(sanitize::fill);
 	if (!copy.hr)
 	{
@@ -444,10 +493,11 @@ ostream &operator<<(ostream &os, const sanitize &san)
 	}
 	if (copy.indeces.size() > 1 && sanitize::prettify)
 	{
-		if (copy.hr) {
+		if (copy.hr)
+		{
 			cout << "ohh. hmm. i suspect we were not supposed to splitter this. yet here we are, doing it anyway." << endl;
 		}
-		
+
 		int i{0}; // keeps track of where in the string we currently are
 		for (int j{0}; j < copy.indeces.size(); j++)
 		{

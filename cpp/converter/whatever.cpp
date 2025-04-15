@@ -13,12 +13,13 @@
 using namespace std;
 
 // configuration vars
-bool configured{false}, prettify{true}, navigator{false}, recursive{false}, consolidate{false}, copysrc{false}, deletesrc{false};
+bool configured{false}, prettify{true}, navigator{false}, recursive{false}, consolidate{false}, copysrc{false}, deletesrc{false}, batch{false};
 char setf('\t');
+unsigned int tabMultiplicity{1}; // how many chars should be printed at a time
+string htmlFolder{"html"}, copyFolder{"converted"}, hr{"~***~"};
 
 fstream raw, cleaned, copier; // input/output streams + a copier to keep a copy of the original exported html n subsequently delete the original from the html-to-process folder
 stringstream sstr, sstr2;
-const string htmlFolder{"html"};
 filesystem::directory_entry currFile{htmlFolder}; // current file, initialized to the html folder
 vector<filesystem::directory_entry> entries;	  // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
 vector<string> fileMaze{};
@@ -80,6 +81,31 @@ void resetCurrentPath(filesystem::directory_entry e)
 		}
 	}
 }
+string tupper(string s)
+{
+	string u{""};
+	for (const char c : s)
+	{
+		u += toupper(c);
+	}
+	return u;
+}
+
+bool tf(string s)
+{
+	if (tupper(s) == "TRUE" || s == "1")
+	{
+		return true;
+	}
+	else if (tupper(s) == "FALSE" || s == "0")
+	{
+		return false;
+	}
+	else
+	{
+		throw new logic_error("hey man. keywords true/false or 1/0 only.");
+	}
+}
 
 void configure()
 {
@@ -90,19 +116,99 @@ void configure()
 		cout << "...configuring..." << endl;
 		resetEntries(true); // silently initialize the entry vector
 		configured = true;
-		convertOpt = 3;
+		convertOpt = 3; // default is just one n you choose
+
+		vector<string> config = {};
+		while (getline(c, tmp))
+		{
+			// get each line
+			if (tmp != "" && tmp[0] != '#') // so if it's not blank n it doesn't start w/a #
+			{
+				sstr << tmp;
+				while (getline(sstr, tmp2, '='))
+				{
+					config.push_back(trim(tmp2)); // trim it just to make sure. in case someone else wants to have spaces for some goddamn reason
+				}
+				// count <<
+				// now analyze the thing
+				if (tupper(config[0]) == "SRC")
+				{
+					htmlFolder = config[1];
+					currFile = filesystem::directory_entry(htmlFolder); // set this as well
+				}
+				else if (tupper(config[0]) == "PRETTIFY")
+				{
+					prettify = tf(config[1]);
+				}
+				else if (tupper(config[0]) == "SETFILL")
+				{
+					// no matter what, will only take the first char
+					if (config[1] == "tab")
+					{
+						setf = '\t';
+					}
+					else if (config[1] == "space")
+					{
+						setf = ' ';
+					}
+					else
+					{
+						setf = char(config[1][0]); // otherwise, just take the first char of the string
+					}
+				}
+				else if (tupper(config[0]) == "BATCH")
+				{
+					batch = tf(config[1]);
+				}
+				else if (tupper(config[0]) == "RECURSIVE")
+				{
+					recursive = tf(config[1]);
+				}
+				else if (tupper(config[0]) == "CONSOLIDATE")
+				{
+					consolidate = tf(config[1]);
+				}
+				else if (tupper(config[0]) == "DELETESRC")
+				{
+					deletesrc = tf(config[1]);
+				}
+				else if (tupper(config[0]) == "COPYSRC")
+				{
+					copysrc = tf(config[1]);
+				}
+				else if (tupper(config[0]) == "COPYFOLDER")
+				{
+					copyFolder = config[1];
+				}
+
+				sstr.clear(); // clear it at the end
+				config.clear();
+			}
+		}
+
+		// now that we're out,
+		cout << "config complete." << endl;
 	}
+	else
+	{
+		cout << "configuration failed." << endl;
+	}
+	c.close(); // and then close the stream ofc
+	c.clear();
 }
 
 int main()
 {
 	configure(); // configure first n foremost
 
-	cleaned << setfill(setf); // set this to tabs
+	// pass along our static vars
 	sanitize::prettify = prettify;
 	sanitize::fill = setf;
+	sanitize::hrStr = hr;
 
-	if (!configured)
+	cleaned << setfill(setf); // set this to tabs
+
+	if (!configured || !navigator)
 	{
 		// if it's not been configured, then naturally we will show the entries n options n stuff
 		showEntries();
@@ -147,7 +253,7 @@ int main()
 	}
 	case 3:
 	{
-		resetEntries();
+		// resetEntries();
 		// only some files
 		cout << "Choose a file or folder: ";
 		cin >> convertOpt;
@@ -504,7 +610,7 @@ void cleaner()
 						{
 							tmp = "";
 						}
-						else if (!listSwitch)
+						else if (!listSwitch) // later when handling links, here's a bit for  helping w/degoogling links: &#38;sa=D&#38;source=editors&#38;ust=\d+&#38;usg=[^"]+
 						{
 							cleanLine << full; // we'll fix this up more later when working with those wretched list items
 							cout << pls << endl;
@@ -550,6 +656,8 @@ void cleaner()
 	// now we go through the html vector with the glorious benefits of an index
 	cout << "now to go through the lines array. (" << linear.size() << " lines)" << endl;
 
+	
+
 	for (int i{0}; i < linear.size(); i++)
 	{
 		bool more{i < linear.size() - 1}, hindsight{i > 0};
@@ -566,7 +674,11 @@ void cleaner()
 		// open the table
 		if ((current.tableIndex != prev.tableIndex) && current.parentage) // making sure that our current one has parentage ensures we don't print an extra, like, <p> tag when switching from a table to smth non-tabular
 		{
-			cleaned << current.printParent() << endl; // print the <table>
+			cleaned << current.printParent(); // print the <table>
+			if (sanitize::prettify)
+			{
+				cleaned << endl;
+			}
 		}
 
 		// open the blockquote
@@ -576,13 +688,17 @@ void cleaner()
 			if (!prev.bqtMode)
 			{
 				// default for bqtMode is false, so we don't need to worry abt doing some shit wrong
-				cleaned << current.printParent() << endl;
+				cleaned << current.printParent();
+				if (sanitize::prettify)
+				{
+					cleaned << endl;
+				}
 			}
 		}
 		// open up the list
 		if (current.listMode)
 		{
-			int first{prev.length()}, second{current.length()};
+			long unsigned int first{prev.length()}, second{current.length()};
 			if (!prev.listMode || first < second)
 			{
 
@@ -592,25 +708,38 @@ void cleaner()
 				}
 				while (first < second)
 				{
-					cleaned << setw(first) << "" << current.printParent() << endl;
+					if (sanitize::prettify)
+					{
+						cleaned << setw(first) << "";
+					}
+					cleaned << current.printParent();
+					if (sanitize::prettify)
+					{
+						cleaned << endl;
+					}
 					first++;
 				}
 			}
 		}
-		// tab our shit
-		if (current.length() > 0)
+		// tab our shit if prettify is on
+		if (current.length() > 0 && sanitize::prettify)
 		{
 			// now we print our tabs
 			cleaned << setw(current.length()) << "";
 		}
 
 		// print the element
-		cleaned << current << endl;
+		cleaned << current;
+		// end the line if prettify is on
+		if (sanitize::prettify)
+		{
+			cleaned << endl;
+		}
 
 		// close the list
 		if (current.listMode)
 		{
-			int first{next.length()}, second{current.length()};
+			long unsigned int first{next.length()}, second{current.length()};
 			if (!next.listMode || first < second)
 			{
 				if (!next.listMode) // if the next one isn't a list, then we must cut off All the lists. this will probably have to get more elaborate when nesting ul and ol w/in each other but whatever not my problem Right Now
@@ -620,7 +749,15 @@ void cleaner()
 				while (first < second && second >= 0)
 				{
 					// so while the next one is less than the current one
-					cleaned << setw(second - 1) << "" << current.closeParent() << endl;
+					if (sanitize::prettify)
+					{
+						cleaned << setw(second - 1) << "";
+					}
+					cleaned << current.closeParent();
+					if (sanitize::prettify)
+					{
+						cleaned << endl;
+					}
 					second--; // going backwards here
 				}
 			}
@@ -631,14 +768,22 @@ void cleaner()
 		{
 			if (!next.bqtMode)
 			{
-				cleaned << current.closeParent() << endl;
+				cleaned << current.closeParent();
+				if (sanitize::prettify)
+				{
+					cleaned << endl;
+				}
 			}
 		}
 
 		// close the table
 		if ((next.tableIndex != current.tableIndex) && current.parentage)
 		{
-			cleaned << current.closeParent() << endl; // print the </table>
+			cleaned << current.closeParent(); // print the </table>
+			if (sanitize::prettify)
+			{
+				cleaned << endl;
+			}
 		}
 	}
 
@@ -711,7 +856,8 @@ void resetEntries()
 }
 void resetEntries(bool silence)
 {
-	if (!silence) {
+	if (!silence)
+	{
 		cout << "currFile: " << currFile << endl;
 	}
 	entries.clear();	  // start by clearing out the vector for display things
