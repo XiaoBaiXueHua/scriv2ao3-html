@@ -427,14 +427,40 @@ void cleaner()
 				// it also does not include "li" bc those get handled separately n will break on their own, so it would be redundant to include them in endling
 
 				// the way tables will be handled is that we should probably have another sanitize as "plsChild" to hold onto the tds, and have the main "pls" hold onto the trs
-				bool block{relevant.display != "inline"}, inList{(currentEl == "ol" || currentEl == "ul")}, inRow{currentEl == "tr"};
+				bool block{relevant.display != "inline"}, inList{((currentEl == "ol" || currentEl == "ul"))}, inRow{currentEl == "tr"};
+
+				// reset the parent els and list switches n stuff Before we reset pls
+				if (inList)
+				{
+					parentEl = currentEl;
+				}
+				listSwitch = ((inList && !closing) || (currentEl == "li")); // there. my god.
+
+				if (currentEl == "table") // don't turn on the table switch bc that's more for handling tds
+				{
+					cout << "ooo we are in a tableeee" << endl;
+					parentEl = currentEl;
+					if (!closing)
+					{
+						tables++; // increment this
+					}
+				}
 
 				// i think the way this n all the switches work might be causing issues w/the list turning off
 				if (block) // so. technically this just means "not an inline"
 				{
+					// tbh. probably have an algorithm or w/e here determine what the fucking element should be lol
+					// cout << "resetting pls..." << endl;
+					// cout << "\t(listSwitch || tableSwitch): [" << (listSwitch || tableSwitch) << "] ? (parentEl) [" << parentEl << "] : (relevant.parent) [" << relevant.parent << "]" << endl;
 					pls = sanitize("", cssRule(((listSwitch || tableSwitch) ? parentEl : relevant.parent), currentClass, (daRule.first ? relevant.guts : ""))); // make sure that the guts aren't just the same as the current el, to avoid accidentally doubling up on that
 				}
-				// cout << "line " << bodyLine << "; currentEl: " << currentEl << "; listSwitch: " << listSwitch << endl;
+
+				if (inList || currentEl == "table") // nothing left to do if we're in a lonely list or table opener
+				{
+					break;
+				}
+
+				// cout << "line " << bodyLine << "; listSwitch: " << listSwitch << ";\tcurrentEl: " << setw(8) << currentEl << ";\tpls.el:" << setw(8) << pls.el << "; relevant.parent: " << setw(8) << relevant.parent << endl;
 				if (inRow)
 				{
 					// more determinations
@@ -442,13 +468,12 @@ void cleaner()
 					{
 						// if it's a closing <tr>, then probably just push pls to linear n break huh.
 						pls.setIndex(tables); // set the index
-						pls.el = currentEl; // i truly do not know how this would get fucked up. there's just smth weird going on w/the lists
 						pushLine(linear);
 					}
 					break; // trs are always solo lines so don't bother processing the rest of this loop
 				}
 
-				if (currentEl == "li")
+				if (currentEl == "li") // list item handling
 				{
 
 					if (!closing)
@@ -464,23 +489,38 @@ void cleaner()
 							innerHTML = innerHTML.substr(0, innerHTML.length() - 5);
 						}
 
-						// regex spanner("(<span\\sclass=\"(\\w|\\d|\\-)+\">)([^<]+)?(</span>)"); // picks the first span only
-						regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)"); // picks the first span only; full class name will be 2
+						regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)([^<]+)?(</span>)"); // picks out spans whereing 0 is token, 1 is full span element, 2 is class name, 3 is last digit/letter of said class, 4 is inner html, and 5 is the closing tag
+						// regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)"); // picks the first span only; full class name will be 2
 						if (regex_search(innerHTML, spanner))
 						{
-							// cout << "there are spans to take care of in here." << endl;
+							cout << "there are spans to take care of in this li." << endl;
 							// cout << innerHTML << endl;
 							while (regex_search(innerHTML, spanner))
 							{
 
 								regex_iterator cow(innerHTML.begin(), innerHTML.end(), spanner);
-								// for (int i{0}; i < (*cow).size(); i++) {
-								const string currSpan{(*cow)[2].str()};
-								daRule = getRule(currSpan); // we can reuse this. i don't see why not
+								for (int i{0}; i < (*cow).size(); i++) { 
+									cout << i << ". " << (*cow)[i] << endl;
+								}
+								// const string currSpan{(*cow)[0].str()};
+								const string currKlass{(*cow)[2].str()};
+								daRule = getRule(currKlass); // we can reuse this. i don't see why not
 								relevant = daRule.second;
+								// string inner{(*cow)[4].str()};
+								// if (daRule.first) {
+								// 	inner = relevant.printTag() + inner + relevant.printClose();
+								// }
+								// innerHTML = regex_replace((*cow)[0], inner);
 
-								innerHTML = regex_replace(innerHTML, regex((*cow)[0].str()), daRule.first ? relevant.printTag() : ""); // whether they get removed or simply printed differently depends on whether the span Matters
-								innerHTML = regex_replace(innerHTML, regex("</span>"), daRule.first ? relevant.printClose() : "");
+								// cout << "replacing [" << currSpan << "] with [" << (daRule.first ? relevant.printTag() : "") << "]." << endl;
+
+								// // cout << "daRule.first ? " << daRule.first << " relevant.printTag() " << relevant.printTag() << endl;
+
+								// innerHTML = regex_replace(innerHTML, regex(currSpan), daRule.first ? relevant.printTag() : ""); // whether they get removed or simply printed differently depends on whether the span Matters
+								
+								// cout << "and replacing [</span>] with [" << (daRule.first ? relevant.printClose() : "") << "]." << endl;
+								// // cout << "and replacin"
+								// innerHTML = regex_replace(innerHTML, regex("</span>"), daRule.first ? relevant.printClose() : "");
 							}
 						}
 
@@ -500,10 +540,10 @@ void cleaner()
 					}
 					else
 					{
-						cout << "currentEl: " << currentEl << "\tinList: " << inList << endl;
-						cout << "untrimmed: " << untrimmed << endl;
-						listSwitch = false;
-						cout << "break due to orphaned li." << endl;
+						// cout << "currentEl: " << currentEl << "\tinList: " << inList << endl;
+						// cout << "untrimmed: " << untrimmed << endl;
+						// listSwitch = false;
+						// cout << "break due to orphaned li." << endl;
 						pls.reset(); // reset and do Not push it
 						break;
 					}
@@ -517,7 +557,6 @@ void cleaner()
 					{
 						// if it's not closing, then we turn some switch on or off or w/e
 						tableSwitch = true;
-						pls.parent = "table";
 					}
 					else
 					{
@@ -538,39 +577,18 @@ void cleaner()
 					// cout << "\n\nCURRENT EL: " << currentEl << endl;
 					if (closing)
 					{
-						if (block) {
-							cout << "now closing a " << currentEl << " element." <<endl;
+						if (block)
+						{
+							cout << "now closing a " << currentEl << " element." << endl;
 						}
 						if (!endling || tableSwitch) // if we're in a table, then you should be adding the end tag to it anyway
 						{
 							// cout << "prevEl: " << prevEl << endl;
 							cleanLine << full;
 						}
-						else if (listSwitch)
-						{
-							// otherwise if we're closing off a list
-
-							listSwitch = false;
-							cout << "turning off the list." << endl;
-						}
-					}
-					else if (inList)
-					{
-						// can't do the usual sneefer snorf
-						listSwitch = true;	  // turn list mode on
-						parentEl = currentEl; // and save which kind of list it was
-					}
-					else if (currentEl == "table")
-					{
-						cout << "ooo we are in a tableeee" << endl;
-						// tableSwitch = true;
-						parentEl = currentEl;
-						tables++; // increment this
-						break;
 					}
 					else
 					{
-						listSwitch = false; // ...just in case...
 
 						string sneefer{("(<" + currentEl + "(.*?)>)(.*?)(</" + currentEl + ">)")}; // the inner html will be index 3 for this
 
@@ -580,8 +598,6 @@ void cleaner()
 						// this is p much the only way to get it to work on spans and p's for reasons that are frankly unknown to me
 						sregex_iterator nyooo(tmp.begin(), tmp.end(), snorf);
 						innerHTML = (*nyooo)[3].str();
-
-						// cout << "innerHTML: " << innerHTML << endl;
 
 						if (currentClass != "")
 						{
@@ -601,10 +617,14 @@ void cleaner()
 									cleanLine << relevant.printClose();
 								}
 							}
+							else
+							{
+								cout << "wadda hell thing are we trying to close: " << currentEl << endl;
+							}
 						}
 						else
 						{
-							cleanLine << full;
+							cleanLine << full; // if it's classless, then just write the whole thing over
 						}
 					}
 					snip();
@@ -624,7 +644,6 @@ void cleaner()
 								cout << "\ncurrentEl: " << currentEl << " guts: " << guts << " full: " << full << endl;
 							}
 							cleanLine << full; // we'll fix this up more later when working with those wretched list items
-							// cout << pls << endl;
 						}
 						else
 						{
@@ -681,9 +700,16 @@ void cleaner()
 		{
 			next = linear[i + 1];
 		}
+		// cout << "\t\t****** LINE " << i << " ******" << endl;
+		// cout << "debug prev: ";
+		// prev.debug(false);
+		// cout << "debug current: ";
+		// current.debug(false);
+		// cout << "debug next: ";
+		// next.debug(false);
 
 		// open the table
-		if ((current.tableIndex != prev.tableIndex) && current.parentage) // making sure that our current one has parentage ensures we don't print an extra, like, <p> tag when switching from a table to smth non-tabular
+		if ((current.tableIndex != prev.tableIndex) && (current.display == "table")) // making sure that our current one has parentage ensures we don't print an extra, like, <p> tag when switching from a table to smth non-tabular
 		{
 			cleaned << current.printParent(); // print the <table>
 			if (sanitize::prettify)
@@ -757,7 +783,7 @@ void cleaner()
 				{
 					first = 0; // set this one to 0
 				}
-				while (first < second && second >= 0)
+				while (first < second)
 				{
 					// so while the next one is less than the current one
 					if (sanitize::prettify)
@@ -788,7 +814,7 @@ void cleaner()
 		}
 
 		// close the table
-		if ((next.tableIndex != current.tableIndex) && current.parentage)
+		if ((next.tableIndex != current.tableIndex) && (current.display == "table"))
 		{
 			cleaned << current.closeParent(); // print the </table>
 			if (sanitize::prettify)

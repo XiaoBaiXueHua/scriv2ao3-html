@@ -371,10 +371,10 @@ public:
 		wa << *this;
 		return wa.str(); // stringify the clean html lol
 	}
-	void debug()
+	void debug(bool inclHTML)
 	{
 		// print out all the vars
-		cout << "----------------\n\n\nDEBUGGING..." << endl
+		cout << "\nDEBUGGING..." << endl
 			 << endl;
 		cout << "INHERITED FROM cssRule:" << endl;
 		cout << "STRINGS:" << endl;
@@ -383,10 +383,13 @@ public:
 		cout << "BOOLS:" << endl;
 		cout << "bqtMode: " << bqtMode << "\tlistMode: " << listMode << "\tfsSpecified: " << fsSpecified << "\tworthwhile: " << worthwhile << "\tparentage: " << parentage << endl;
 		cout << "NUMBERS: " << endl;
-		cout << "length: " << length() << "\traw size: " << rawSize() << endl
+		cout << "length: " << length() << "\tsize: " << size() << "\traw size: " << rawSize() << endl
 			 << endl;
 
-		cout << "innerHTML:\n\t" << innerHTML << endl;
+		if (inclHTML) {
+			cout << "innerHTML:\n\t" << innerHTML << endl;
+		}
+		cout << "\n----------------\n\n\n";
 	}
 	// operator overloading
 	friend ostream &operator<<(ostream &, const sanitize &); // printing out the thing out
