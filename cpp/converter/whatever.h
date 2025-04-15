@@ -61,7 +61,8 @@ public:
 			}
 			i++;
 		}
-		if (el != "span")
+		// if (el != "span")
+		if (!(el == "span" || el == "em" || el == "ins" || el == "del" || el == "strong"))
 		{
 			if (el == "table" || el == "th" || el == "tbody" || el == "thead" || el == "td" || el == "tr")
 			{
@@ -234,7 +235,7 @@ public:
 			{
 				string cleanTmp{""};
 				// vector<string> splits = {};
-				cout << "\n\nhi... this thing is like, " << rawSize() << " chars long so. we're gonna skip the sanitization rn to prevent segmentation errors." << endl;
+				// cout << "\n\nhi... this thing is like, " << rawSize() << " chars long so. we're gonna skip the sanitization rn to prevent segmentation errors." << endl;
 				// debug(); // and then debug it
 				long unsigned int i{0}, spacer{2048}; 
 				while (i < rawSize()) {

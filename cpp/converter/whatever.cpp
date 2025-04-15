@@ -429,11 +429,12 @@ void cleaner()
 				// the way tables will be handled is that we should probably have another sanitize as "plsChild" to hold onto the tds, and have the main "pls" hold onto the trs
 				bool block{relevant.display != "inline"}, inList{(currentEl == "ol" || currentEl == "ul")}, inRow{currentEl == "tr"};
 
+				// i think the way this n all the switches work might be causing issues w/the list turning off
 				if (block) // so. technically this just means "not an inline"
 				{
 					pls = sanitize("", cssRule(((listSwitch || tableSwitch) ? parentEl : relevant.parent), currentClass, (daRule.first ? relevant.guts : ""))); // make sure that the guts aren't just the same as the current el, to avoid accidentally doubling up on that
 				}
-
+				// cout << "line " << bodyLine << "; currentEl: " << currentEl << "; listSwitch: " << listSwitch << endl;
 				if (inRow)
 				{
 					// more determinations
@@ -441,6 +442,7 @@ void cleaner()
 					{
 						// if it's a closing <tr>, then probably just push pls to linear n break huh.
 						pls.setIndex(tables); // set the index
+						pls.el = currentEl; // i truly do not know how this would get fucked up. there's just smth weird going on w/the lists
 						pushLine(linear);
 					}
 					break; // trs are always solo lines so don't bother processing the rest of this loop
@@ -498,8 +500,10 @@ void cleaner()
 					}
 					else
 					{
+						cout << "currentEl: " << currentEl << "\tinList: " << inList << endl;
+						cout << "untrimmed: " << untrimmed << endl;
 						listSwitch = false;
-						// cout << "break due to orphaned li." << endl;
+						cout << "break due to orphaned li." << endl;
 						pls.reset(); // reset and do Not push it
 						break;
 					}
@@ -513,6 +517,7 @@ void cleaner()
 					{
 						// if it's not closing, then we turn some switch on or off or w/e
 						tableSwitch = true;
+						pls.parent = "table";
 					}
 					else
 					{
@@ -533,12 +538,15 @@ void cleaner()
 					// cout << "\n\nCURRENT EL: " << currentEl << endl;
 					if (closing)
 					{
+						if (block) {
+							cout << "now closing a " << currentEl << " element." <<endl;
+						}
 						if (!endling || tableSwitch) // if we're in a table, then you should be adding the end tag to it anyway
 						{
 							// cout << "prevEl: " << prevEl << endl;
 							cleanLine << full;
 						}
-						else if (inList)
+						else if (listSwitch)
 						{
 							// otherwise if we're closing off a list
 
@@ -555,6 +563,7 @@ void cleaner()
 					else if (currentEl == "table")
 					{
 						cout << "ooo we are in a tableeee" << endl;
+						// tableSwitch = true;
 						parentEl = currentEl;
 						tables++; // increment this
 						break;
@@ -604,19 +613,23 @@ void cleaner()
 				{
 					if (!closing) // shouldn't have to deal with this anymore, but we'll see still
 					{
-						cout << "...but smth weird happened.\n\t" << tmp << endl;
-						cout << "currentEl: " << currentEl << " full: " << full << endl;
 						if (tmp.length() <= 1)
 						{
 							tmp = "";
 						}
 						else if (!listSwitch) // later when handling links, here's a bit for  helping w/degoogling links: &#38;sa=D&#38;source=editors&#38;ust=\d+&#38;usg=[^"]+
 						{
+							if (guts[0] != 'a') // check for non-link elements
+							{
+								cout << "\ncurrentEl: " << currentEl << " guts: " << guts << " full: " << full << endl;
+							}
 							cleanLine << full; // we'll fix this up more later when working with those wretched list items
-							cout << pls << endl;
+							// cout << pls << endl;
 						}
 						else
 						{
+							cout << "...but smth weird happened.\n\t" << tmp << endl;
+							cout << "\ncurrentEl: " << currentEl << " guts: " << guts << " full: " << full << endl;
 							// cout << "break due to list switch stuffs." << endl;
 							break; // break it if we're in list mode
 						}
@@ -655,8 +668,6 @@ void cleaner()
 
 	// now we go through the html vector with the glorious benefits of an index
 	cout << "now to go through the lines array. (" << linear.size() << " lines)" << endl;
-
-	
 
 	for (int i{0}; i < linear.size(); i++)
 	{
