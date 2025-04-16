@@ -16,7 +16,7 @@ the program will trim the spaces off your inputs, so you *could*, if you wanted,
 |`copyfolder`|**string**|**default:** *`converted`*. <br>path to the folder where the original scrivener html files are to be transferred, if `copysrc` is set to `TRUE`.|
 |`prettify`|**bool**|**default:** *`true`*.<br>prints the output with new lines and tabs for pretty readability when `TRUE`. otherwise, the output is one minified html mass. |
 |`setfill`|**keyword**|**default:** *`\t`*. <br>sets the spacing character on prettified output. <br>**ACCEPTED KEYWORDS**: `tab` (`\t`); `space` (` `); all other input will result in setting the first character of the input string as the fill char. |
-|`template`|**string**|**default:** *none*.<br>sets an html file as a template for the output. see #template section for more info when i make this a thing. |
+|`template`|**string**|**default:** *none*.<br>path to an html file to serve as a template for the output. see #template section for more info when i make this a thing. |
 
 ## template
 
