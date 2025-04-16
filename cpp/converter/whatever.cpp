@@ -45,10 +45,9 @@ pair<bool, cssRule> getRule(string &);
 pair<bool, cssRule> getRule(const string);
 pair<bool, cssRule> getRule(string &, string &, string &);
 void snip();
-void snip(string &s);
-void pushLine(vector<sanitize> &v);			// both pls && cleanLine are global, so this doesn't need to take those as args
-void pushLine(vector<sanitize> &v, bool c); // conditional version
-void pushLine(sanitize &s, vector<sanitize> &v, bool c);
+void pushLine(vector<sanitize> &);			// both pls && cleanLine are global, so this doesn't need to take those as args
+void pushLine(vector<sanitize> &, bool ); // conditional version
+void pushLine(sanitize &, vector<sanitize> &, bool );
 
 string currentPath(); // returns the maze up to the current folder
 void makeDir();
@@ -478,64 +477,22 @@ void cleaner()
 					{
 						// can't be doing this if it's an orphaned closing tag
 
-						snip();			 // cut off the <li>
-						innerHTML = tmp; // now that we snipped off the opening tag, we can just do this
+						snip(); // cut off the <li>
 
-						if (regex_search(innerHTML, regex("</li>")))
+						if (regex_search(tmp, regex("</li>")))
 						{
 							// if there's an </li> at the end, cut it off too
-							innerHTML = innerHTML.substr(0, innerHTML.length() - 5);
+							tmp = tmp.substr(0, tmp.length() - 5);
 						}
-
-						// regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)([^<]+)?(</span>)"); // picks out spans whereing 0 is token, 1 is full span element, 2 is class name, 3 is last digit/letter of said class, 4 is inner html, and 5 is the closing tag
-						// // regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)"); // picks the first span only; full class name will be 2
-						// if (regex_search(innerHTML, spanner))
-						// {
-						// 	cout << "there are spans to take care of in this li." << endl;
-						// 	// cout << innerHTML << endl;
-						// 	while (regex_search(innerHTML, spanner))
-						// 	{
-
-						// 		regex_iterator cow(innerHTML.begin(), innerHTML.end(), spanner);
-						// 		for (int i{0}; i < (*cow).size(); i++) {
-						// 			cout << i << ". " << (*cow)[i] << endl;
-						// 		}
-						// 		break;
-						// 		// const string currSpan{(*cow)[0].str()};
-						// 		const string currKlass{(*cow)[2].str()};
-						// 		daRule = getRule(currKlass); // we can reuse this. i don't see why not
-						// 		relevant = daRule.second;
-						// 		// string inner{(*cow)[4].str()};
-						// 		// if (daRule.first) {
-						// 		// 	inner = relevant.printTag() + inner + relevant.printClose();
-						// 		// }
-						// 		// innerHTML = regex_replace((*cow)[0], inner);
-
-						// 		// cout << "replacing [" << currSpan << "] with [" << (daRule.first ? relevant.printTag() : "") << "]." << endl;
-
-						// 		// // cout << "daRule.first ? " << daRule.first << " relevant.printTag() " << relevant.printTag() << endl;
-
-						// 		// innerHTML = regex_replace(innerHTML, regex(currSpan), daRule.first ? relevant.printTag() : ""); // whether they get removed or simply printed differently depends on whether the span Matters
-
-						// 		// cout << "and replacing [</span>] with [" << (daRule.first ? relevant.printClose() : "") << "]." << endl;
-						// 		// // cout << "and replacin"
-						// 		// innerHTML = regex_replace(innerHTML, regex("</span>"), daRule.first ? relevant.printClose() : "");
-						// 	}
-						// }
 
 						regex spaces("^\\s+"); // get spaces from the start
 						// regex_match(untrimmed, smidge, spaces);
 						regex_token_iterator oi(untrimmed.begin(), untrimmed.end(), spaces);
-						// cout << "this would be a setw(" << (*oi).str().length() << "); adding " << (floor((*oi).str().length() / 2) - 1) << endl;
-						// cout << "pls currently has an indent of: " << pls.length() << endl;
 						pls += (floor((*oi).str().length() / 2) - 1); // add the indent. also floor it just in case
+						
+						cleanLine << li(tmp); // add the clean line which has been wonderfully and fearfully cleaned by our new li class
 
-						cleanLine << innerHTML;
-
-						// we shouldn't really need the final snip since tmp gets reset anyway
-						// trimAway = innerHTML.length();
-						// cout << "trimming away " << trimAway << " chars from " << tmp << endl;
-						// snip();
+						pushLine(linear); // have to push this or else it will go missing
 					}
 					else
 					{
@@ -544,11 +501,8 @@ void cleaner()
 						// listSwitch = false;
 						// cout << "break due to orphaned li." << endl;
 						pls.reset(); // reset and do Not push it
-						break;
 					}
-					// cout << "break due to unclosed list item." << endl;
-					pushLine(linear); // have to push this or else it will go missing
-					break;
+					break; // break it no matter what
 				}
 				else if (currentEl == "td") // table handling
 				{
@@ -562,7 +516,7 @@ void cleaner()
 					{
 						// otherwise, closing td gets added to the pls, closing tr gets pushed to linear, n we do some switching stuff
 						tableSwitch = false;
-						
+
 						(*sanPtr) += cleanLine; // closing td gets added to the pls, closing tr gets pushed to linear, n we do some switching stuff
 
 						pls += *sanPtr; // add the sanPtr to pls
@@ -620,10 +574,6 @@ void cleaner()
 									cleanLine << relevant.printClose();
 								}
 							}
-							// else
-							// {
-							// 	cout << "wadda hell thing are we trying to close: " << currentEl << endl;
-							// }
 						}
 						else
 						{
@@ -703,13 +653,6 @@ void cleaner()
 		{
 			next = linear[i + 1];
 		}
-		// cout << "\t\t****** LINE " << i << " ******" << endl;
-		// cout << "debug prev: ";
-		// prev.debug(false);
-		// cout << "debug current: ";
-		// current.debug(false);
-		// cout << "debug next: ";
-		// next.debug(false);
 
 		// open the table
 		if ((current.tableIndex != prev.tableIndex) && (current.display == "table")) // making sure that our current one has parentage ensures we don't print an extra, like, <p> tag when switching from a table to smth non-tabular
@@ -1013,18 +956,7 @@ pair<bool, cssRule> getRule(string &e, string &c, string &g)
 
 void snip()
 {
-	snip(tmp);
-}
-void snip(string &s) {
-	try
-	{
-		s.erase(s.begin(), s.begin() + trimAway);
-	}
-	catch (out_of_range)
-	{
-		cout << "out of range!!" << endl;
-		s = "";
-	}
+	snip(tmp, trimAway);
 }
 
 void pushLine(vector<sanitize> &v)

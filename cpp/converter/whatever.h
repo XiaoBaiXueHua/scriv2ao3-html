@@ -28,6 +28,18 @@ string trim(string &s)
 	vtrim(s);
 	return s;
 }
+void snip(string &s, int i)
+{
+	try
+	{
+		s.erase(s.begin(), s.begin() + i);
+	}
+	catch (out_of_range)
+	{
+		cout << "out of range!!" << endl;
+		s = "";
+	}
+}
 
 class cssRule
 {
@@ -236,9 +248,6 @@ public:
 			if (rawSize() > 8192)
 			{
 				string cleanTmp{""};
-				// vector<string> splits = {};
-				// cout << "\n\nhi... this thing is like, " << rawSize() << " chars long so. we're gonna skip the sanitization rn to prevent segmentation errors." << endl;
-				// debug(); // and then debug it
 				long unsigned int i{0}, spacer{2048};
 				while (i < rawSize())
 				{
@@ -250,11 +259,6 @@ public:
 					cleanTmp += findAndSanitize(sub);
 					i += sub.length();
 				}
-				// then add the last bit back on
-				// cleanTmp += findAndSanitize(tmp.substr(i, r));
-				// sub = tmp.substr(i);
-				// cleanTmp += findAndSanitize(sub);
-				tmp.clear();	// clear it out first maybe?
 				tmp = cleanTmp; // set it to this
 			}
 			else
@@ -539,3 +543,86 @@ bool sanitize::prettify = true;
 char sanitize::fill = '\t';
 string sanitize::hrStr = "~***~";
 vector<cssRule> cssRule::stylesheet = {};
+
+class li
+{
+	// actually i think it might be time to make a class for this one.
+public:
+	li() {};
+	li(string s)
+	{
+		tmp = s;
+		regex spanner(sp);
+		if (regex_search(tmp, spanner))
+		{
+			long long unsigned int i;
+			while (regex_search(tmp, spanner))
+			{
+
+				i = {tmp.find("<span")};
+				if (i > 0) //
+				{
+					clean += tmp.substr(0, i); // add the orphans up front of the span
+					snip(tmp, i);
+				}
+
+				i = tmp.find("</span>") + 7; // automatically account for the length of the </span>
+				string spn{tmp.substr(0, i)};
+				clean += cleanSpan(spn);
+				snip(tmp, i);
+			}
+			// then add the rest of tmp to the clean line
+			clean += tmp;
+		}
+		else
+		{
+			clean = tmp; // otherwise we're free! we don't need to do any cleaning
+		}
+	}
+	string cleanSpan(string span)
+	{
+		string t{""};
+		regex s(sp);
+		// match_results sm = regex_match(span, s);
+		smatch sm; // the way this works is that it needs to have that fuckin input string be Exactly. the same.
+		if (regex_match(span, sm, s))
+		{
+			t = sm[4].str(); // the inner html
+
+			if (incl(sm[2].str())) // if it's an important span, held in the static thing, then we also add the tags
+			{
+				t = r.printTag() + t + r.printClose();
+			}
+		}
+		
+		return t;
+	}
+	bool incl(string k) // k for class
+	{
+		bool t{false};
+		// anyway search through the thing
+		for (auto rule : cssRule::stylesheet)
+		{
+			if (rule.klass == k)
+			{
+				t = true;
+				r = rule;
+				break;
+			}
+		}
+		return t;
+	}
+	friend ostream &operator<<(ostream &, const li &);
+
+private:
+	string sp{"(<span\\sclass=\"((\\w|\\d|\\-)+)\">)(.*?)(</span>)"}; // regex for spans i fucking guess
+protected:
+	string clean{""}, tmp{""};
+	cssRule r;
+};
+
+ostream &operator<<(ostream &os, const li &l)
+{
+	os << l.clean;
+	return os;
+}
