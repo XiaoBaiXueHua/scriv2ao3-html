@@ -13,10 +13,10 @@
 using namespace std;
 
 // configuration vars
-bool configured{false}, prettify{true}, navigator{false}, recursive{false}, consolidate{false}, copysrc{false}, deletesrc{false}, batch{false};
+bool configured{false}, prettify{true}, navigator{true}, recursive{false}, consolidate{false}, copysrc{false}, deletesrc{false}, batch{false};
 char setf('\t');
 unsigned int tabMultiplicity{1}; // how many chars should be printed at a time
-string htmlFolder{"html"}, copyFolder{"converted"}, hr{"~***~"};
+string htmlFolder{"html"}, outputFolder{"output"}, copyFolder{"converted"}, hr{"~***~"};
 
 fstream raw, cleaned, copier; // input/output streams + a copier to keep a copy of the original exported html n subsequently delete the original from the html-to-process folder
 stringstream sstr, sstr2;
@@ -45,13 +45,14 @@ pair<bool, cssRule> getRule(string &);
 pair<bool, cssRule> getRule(const string);
 pair<bool, cssRule> getRule(string &, string &, string &);
 void snip();
-void pushLine(vector<sanitize> &);			// both pls && cleanLine are global, so this doesn't need to take those as args
-void pushLine(vector<sanitize> &, bool ); // conditional version
-void pushLine(sanitize &, vector<sanitize> &, bool );
+void pushLine(vector<sanitize> &);		 // both pls && cleanLine are global, so this doesn't need to take those as args
+void pushLine(vector<sanitize> &, bool); // conditional version
+void pushLine(sanitize &, vector<sanitize> &, bool);
 
 string currentPath(); // returns the maze up to the current folder
 void makeDir();
-void open(filesystem::directory_entry); // opens up the cleaned thing
+void makeDir(string);
+void open(string &, filesystem::directory_entry , fstream &); // opens up the stream
 
 void resetCurrentPath(filesystem::directory_entry e)
 {
@@ -129,18 +130,24 @@ void configure()
 				{
 					config.push_back(trim(tmp2)); // trim it just to make sure. in case someone else wants to have spaces for some goddamn reason
 				}
-				// count <<
+				string uc{tupper(config[0])}; // only run this once per loop
+
+				if (uc == "RECURSIVE" || uc == "BATCH" || uc == "OPT")
+				{
+					// if either of these are turned on, then that means the user probably knows what they want n don't need to be asked what option they'd like
+					navigator = false;
+				}
 				// now analyze the thing
-				if (tupper(config[0]) == "SRC")
+				if (uc == "SRC")
 				{
 					htmlFolder = config[1];
 					currFile = filesystem::directory_entry(htmlFolder); // set this as well
 				}
-				else if (tupper(config[0]) == "PRETTIFY")
+				else if (uc == "PRETTIFY")
 				{
 					prettify = tf(config[1]);
 				}
-				else if (tupper(config[0]) == "SETFILL")
+				else if (uc == "SETFILL")
 				{
 					// no matter what, will only take the first char
 					if (config[1] == "tab")
@@ -156,29 +163,42 @@ void configure()
 						setf = char(config[1][0]); // otherwise, just take the first char of the string
 					}
 				}
-				else if (tupper(config[0]) == "BATCH")
+				else if (uc == "BATCH")
 				{
 					batch = tf(config[1]);
 				}
-				else if (tupper(config[0]) == "RECURSIVE")
+				else if (uc == "RECURSIVE")
 				{
 					recursive = tf(config[1]);
 				}
-				else if (tupper(config[0]) == "CONSOLIDATE")
+				else if (uc == "CONSOLIDATE")
 				{
 					consolidate = tf(config[1]);
 				}
-				else if (tupper(config[0]) == "DELETESRC")
+				else if (uc == "DELETESRC")
 				{
 					deletesrc = tf(config[1]);
 				}
-				else if (tupper(config[0]) == "COPYSRC")
+				else if (uc == "COPYSRC")
 				{
 					copysrc = tf(config[1]);
 				}
-				else if (tupper(config[0]) == "COPYFOLDER")
+				else if (uc == "COPYFOLDER")
 				{
 					copyFolder = config[1];
+				}
+				else if (uc == "HRSTR")
+				{
+					hr = config[1];
+				}
+				else if (uc == "OPT")
+				{
+					// in this one they just straight up choose which option
+					convertOpt = stoi(config[1]);
+				}
+				else if (uc == "OUTPUTFOLDER")
+				{
+					outputFolder = config[1];
 				}
 
 				sstr.clear(); // clear it at the end
@@ -187,6 +207,18 @@ void configure()
 		}
 
 		// now that we're out,
+		if (navigator && convertOpt == 0)
+		{
+			// so if we have the recursive/consolidation settings, like, set, then we should set convertOpt based on said settings
+			if (batch && recursive)
+			{
+				convertOpt = 2;
+			}
+			else if (batch)
+			{
+				convertOpt = 1;
+			}
+		}
 		cout << "config complete." << endl;
 	}
 	else
@@ -208,7 +240,7 @@ int main()
 
 	cleaned << setfill(setf); // set this to tabs
 
-	if (!configured || !navigator)
+	if (!configured || navigator)
 	{
 		// if it's not been configured, then naturally we will show the entries n options n stuff
 		showEntries();
@@ -222,7 +254,7 @@ int main()
 	case 1:
 	{ // all files, but not sub-folders
 		cout << "Cleaning all files, but not sub-folders." << endl;
-		resetCurrentPath(currFile); // since we're not doing sub-folders, this is enough
+		// resetCurrentPath(currFile); // since we're not doing sub-folders, this is enough
 		for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 		{
 			currFile = dir_entry;
@@ -237,7 +269,7 @@ int main()
 		for (auto const &dir_entry : filesystem::recursive_directory_iterator{currFile})
 		{
 
-			resetCurrentPath(dir_entry); // this should be redone every time
+			// resetCurrentPath(dir_entry); // this should be redone every time
 			if (!dir_entry.is_directory())
 			{
 				//
@@ -253,7 +285,7 @@ int main()
 	}
 	case 3:
 	{
-		// resetEntries();
+		resetEntries();
 		// only some files
 		cout << "Choose a file or folder: ";
 		cin >> convertOpt;
@@ -268,7 +300,7 @@ int main()
 		if (currFile.is_directory())
 		{
 			// loop all
-			resetCurrentPath(currFile);
+			// resetCurrentPath(currFile);
 			for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 			{
 				currFile = dir_entry;
@@ -291,8 +323,14 @@ void cleaner()
 {
 	cout << "Now cleaning: " << currFile.path().stem() << endl
 		 << endl;
+	resetCurrentPath(currFile); // only do it once per file opened
+
 	raw.open(currFile.path()); // open the raw
-	open(currFile);			   // open the output
+	if (copysrc) {
+		// open the copy stream
+		open(copyFolder, currFile, copier);
+	}
+	open(outputFolder, currFile, cleaned); // open the output
 
 	sanitize *sanPtr = new sanitize;
 
@@ -314,6 +352,9 @@ void cleaner()
 	// go through the whole thing once
 	while (getline(raw, tmp))
 	{
+		if (copysrc) {
+			copier << tmp << endl; // make da copy
+		}
 		bodyLine++;
 		string untrimmed{tmp}; // untrimmed version for list items maybe
 		tmp = trim(tmp);	   // trim owo
@@ -339,12 +380,7 @@ void cleaner()
 				{
 					medianFontSize = tmpStyles[floor((tmpStyles.size() - 1) / 2)].fontSize;
 				}
-				// cout << "median font size: " << medianFontSize << endl;
-
-				// cout << "ostensibly sorted by font size. let's check: " << endl;
 				cssRule::stylesheet.clear();
-				// stylesheet.swap(&vector<cssRule>{});
-				// stylesheet = {};
 				for (auto r : tmpStyles)
 				{
 					if (r.fsSpecified)
@@ -365,8 +401,6 @@ void cleaner()
 							}
 						}
 					}
-					// cout << "\t" << r.el << "." << r.klass << " {" << r.rulez << "}" << endl
-					//  << endl;
 					if (r.el != "span")
 					{
 						cssRule::stylesheet.push_back(r);
@@ -389,7 +423,8 @@ void cleaner()
 			if (tmp == "</body>")
 			{
 				bodySwitch = false;
-				// cout << "complete." << endl;
+				//
+				cout << "finished cleaning ." << endl;
 				break;
 			}
 
@@ -397,7 +432,6 @@ void cleaner()
 			cleanLine.clear();
 			trimAway = 0; // integer to let us know the index of the proper substring
 
-			bool prevClosing{false};
 			regex anyEl("^(<(.*?)>)");
 
 			while (tmp != "")
@@ -412,12 +446,6 @@ void cleaner()
 				regex tagStructure("/?((\\w|\\d)+)(\\sclass=\"(.*?)\")?"); // this results in 0 = guts, 1 = element name, and 4 = class name
 
 				regex_match(guts, smidge, tagStructure);
-				// cout << "\tlooking at smidges: " << endl;
-				// for (const auto s : smidge)
-				// {
-				// 	cout << "(" << s << ")\t";
-				// }
-				// cout << endl;
 				string currentEl{smidge[1].str()};
 				string currentClass{smidge[4].str()};
 				// cout << "currentEl: " << currentEl << "\t\t" << "currentClass: " << currentClass << endl;
@@ -489,7 +517,7 @@ void cleaner()
 						// regex_match(untrimmed, smidge, spaces);
 						regex_token_iterator oi(untrimmed.begin(), untrimmed.end(), spaces);
 						pls += (floor((*oi).str().length() / 2) - 1); // add the indent. also floor it just in case
-						
+
 						cleanLine << li(tmp); // add the clean line which has been wonderfully and fearfully cleaned by our new li class
 
 						pushLine(linear); // have to push this or else it will go missing
@@ -770,8 +798,14 @@ void cleaner()
 		}
 	}
 
+	if (consolidate)
+		cleaned << "<hr />" << endl; // before closing the streams, add an hr btwn docs if they're to be consolidated
+
 	raw.close(); // close the streaaaaams
 	cleaned.close();
+	if (copysrc) {
+		copier.close();
+	}
 
 	sanPtr = nullptr;
 	delete sanPtr;
@@ -998,40 +1032,52 @@ string currentPath()
 	return t;
 }
 
-void makeDir()
-{
-	//
-	string op{"output"};
-	if (!filesystem::directory_entry(op).exists())
+void makeDir(string s) {
+	// string op{outputFolder};
+	if (!filesystem::directory_entry(s).exists())
 	{
-		filesystem::create_directory(op); // make the output folder if dne
+		filesystem::create_directory(s); // make the output folder if dne
 	}
 	for (auto const &ent : fileMaze)
 	{
-		op += "/" + ent;
-		if (!filesystem::directory_entry(op).exists())
+		s += "/" + ent;
+		if (!filesystem::directory_entry(s).exists())
 		{
 			// if a particular subfolder doesn't exist, then create it
-			filesystem::create_directory(op + "/");
+			filesystem::create_directory(s + "/");
 			cout << "Now creating directory: " << tmp << endl;
 		}
 	}
 }
 
-void open(filesystem::directory_entry p)
+void makeDir()
 {
+	makeDir(outputFolder);
+}
+
+void open(string &folder, filesystem::directory_entry p, fstream &fstr)
+{
+	if (fstr.is_open()) {
+		// if it's already open, like if i forgot to close it, then close it again. ehe
+		fstr.close();
+	}
+	
 	makeDir(); // make the directories if necessary
-	string op{"output/" + currentPath() + currFile.path().stem().string() + ".html"};
+	if (copysrc) {
+		makeDir(copyFolder);
+	}
+
+	string op{folder + "/" + currentPath() + ((consolidate && folder != copyFolder) ? "index" : p.path().stem().string()) + ".html"};
 	// should only really be a thing for the cleaned, so this should be our final output path as a string
 	// cleaned.open(p.path());
 	cout << "Now opening: " << op << endl;
-	cleaned.open(op);
-	if (!cleaned.is_open())
+	consolidate ? fstr.open(op, ios::app) : fstr.open(op);
+	if (!fstr.is_open())
 	{
-		cleaned.clear();
-		cleaned.open(op, ios::out);
-		cleaned.close();
-		cleaned.open(op);
+		fstr.clear();
+		fstr.open(op, ios::out);
+		fstr.close();
+		consolidate ? fstr.open(op, ios::app) : fstr.open(op);
+		// cleaned.open(op);
 	}
-	//
 }

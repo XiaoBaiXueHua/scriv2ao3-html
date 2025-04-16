@@ -1,3 +1,6 @@
+#ifndef SCRIV2AO3
+#define SCRIV2AO3
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -163,7 +166,6 @@ public:
 		}
 		else if (el == "ol" || el == "ul")
 		{
-			// parent = el;
 			el = "li";
 			listMode = true;
 		}
@@ -228,12 +230,15 @@ public:
 			indent = 1;
 		}
 		innerHTML = s;
+		if (s == sanitize::hrStr) {
+			hr = true;
+		}
 	}
 
 	string cleanup()
 	{
 		string tmp = innerHTML; // leave the actual inner html untouched
-		if (hr || regex_search(tmp, regex(string("^(<.*?>)*?" + sanitize::hrStr + "(<.*?>)*?$"))))
+		if (hr || tmp == sanitize::hrStr || regex_search(tmp, regex(string("^(<.*?>)*?" + sanitize::hrStr + "(<.*?>)*?$"))))
 		{
 			hr = true;
 			tmp = "<hr />";
@@ -541,7 +546,7 @@ ostream &operator<<(ostream &os, const sanitize &san)
 // initialize the statics
 bool sanitize::prettify = true;
 char sanitize::fill = '\t';
-string sanitize::hrStr = "~***~";
+string sanitize::hrStr = "~***~"; // must either be an exact string or a regex
 vector<cssRule> cssRule::stylesheet = {};
 
 class li
@@ -626,3 +631,6 @@ ostream &operator<<(ostream &os, const li &l)
 	os << l.clean;
 	return os;
 }
+
+
+#endif
