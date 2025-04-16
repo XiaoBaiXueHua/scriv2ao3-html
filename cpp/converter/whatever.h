@@ -164,7 +164,7 @@ public:
 		parentage = (el != parent); // idk. might be useful later i suppose
 	}
 
-	string printTag() { return "<" + el + guts + ">"; }
+	string printTag() { return "<" + el + guts + ">"; } // making the printer check means this shit will proceed to take five million billion years to do so.
 	string printClose() { return "</" + el + ">"; }
 	string printParent() { return "<" + parent + ">"; }
 	string closeParent() { return "</" + parent + ">"; }
@@ -177,6 +177,8 @@ public:
 	string el{""}, klass{""}, rulez{""}, display{"inline"}, guts{""}, parent{""}; // "parent" is used for things like blockquotes n lists, which have important nesting happening
 
 	bool bqtMode{false}, listMode{false}, fsSpecified{false}, worthwhile{false}, parentage{false}; // booleans for when we're working w/blockquotes n stuff
+
+	static vector<cssRule> stylesheet; // static vector stylesheet
 
 	int tableIndex{0}; // in case we have adjacent tables, this keeps track of which one we're on
 
@@ -237,21 +239,22 @@ public:
 				// vector<string> splits = {};
 				// cout << "\n\nhi... this thing is like, " << rawSize() << " chars long so. we're gonna skip the sanitization rn to prevent segmentation errors." << endl;
 				// debug(); // and then debug it
-				long unsigned int i{0}, spacer{2048}; 
-				while (i < rawSize()) {
+				long unsigned int i{0}, spacer{2048};
+				while (i < rawSize())
+				{
 					// let's do this in nice safe increments of 2048
 					// string sub{tmp.substr(i, i + 2048)};
 					// sub = ;
 					string sub{tmp.substr(i, i + spacer)};
 					// then do some checks to make sure we're not splitting up any escape codes
 					cleanTmp += findAndSanitize(sub);
-					i += sub.length(); 
+					i += sub.length();
 				}
 				// then add the last bit back on
 				// cleanTmp += findAndSanitize(tmp.substr(i, r));
 				// sub = tmp.substr(i);
 				// cleanTmp += findAndSanitize(sub);
-				tmp.clear(); // clear it out first maybe?
+				tmp.clear();	// clear it out first maybe?
 				tmp = cleanTmp; // set it to this
 			}
 			else
@@ -386,7 +389,8 @@ public:
 		cout << "length: " << length() << "\tsize: " << size() << "\traw size: " << rawSize() << endl
 			 << endl;
 
-		if (inclHTML) {
+		if (inclHTML)
+		{
 			cout << "innerHTML:\n\t" << innerHTML << endl;
 		}
 		cout << "\n----------------\n\n\n";
@@ -534,3 +538,4 @@ ostream &operator<<(ostream &os, const sanitize &san)
 bool sanitize::prettify = true;
 char sanitize::fill = '\t';
 string sanitize::hrStr = "~***~";
+vector<cssRule> cssRule::stylesheet = {};

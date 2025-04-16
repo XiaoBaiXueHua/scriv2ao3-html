@@ -23,7 +23,7 @@ stringstream sstr, sstr2;
 filesystem::directory_entry currFile{htmlFolder}; // current file, initialized to the html folder
 vector<filesystem::directory_entry> entries;	  // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
 vector<string> fileMaze{};
-vector<cssRule> stylesheet;
+// vector<cssRule> stylesheet;
 string tmp{""}, tmp2{""}, tmp3{""};
 string innerHTML{""};
 string full{""}, guts{""};
@@ -45,6 +45,7 @@ pair<bool, cssRule> getRule(string &);
 pair<bool, cssRule> getRule(const string);
 pair<bool, cssRule> getRule(string &, string &, string &);
 void snip();
+void snip(string &s);
 void pushLine(vector<sanitize> &v);			// both pls && cleanLine are global, so this doesn't need to take those as args
 void pushLine(vector<sanitize> &v, bool c); // conditional version
 void pushLine(sanitize &s, vector<sanitize> &v, bool c);
@@ -309,7 +310,7 @@ void cleaner()
 	// vector<string> cssRules{};
 	// cleaned.open("output/test.html"); // just the test for now
 	cleaned.clear();
-	stylesheet.clear();
+	cssRule::stylesheet.clear();
 
 	// go through the whole thing once
 	while (getline(raw, tmp))
@@ -329,7 +330,7 @@ void cleaner()
 				cout << "end of style. now sorting the stylesheet by font size." << endl
 					 << endl;
 				// and then we should sort the stylesheet in various ways and process the vector to determine some of the other html things, like whether smth counts as <big> or <small>
-				vector<cssRule> tmpStyles = stylesheet;
+				vector<cssRule> tmpStyles = cssRule::stylesheet;
 				stable_sort(tmpStyles.begin(), tmpStyles.end(), [](const cssRule &a, const cssRule &b)
 							{
 								return a.fontSize < b.fontSize; // sorts from least to greatest
@@ -342,7 +343,7 @@ void cleaner()
 				// cout << "median font size: " << medianFontSize << endl;
 
 				// cout << "ostensibly sorted by font size. let's check: " << endl;
-				stylesheet.clear();
+				cssRule::stylesheet.clear();
 				// stylesheet.swap(&vector<cssRule>{});
 				// stylesheet = {};
 				for (auto r : tmpStyles)
@@ -369,7 +370,7 @@ void cleaner()
 					//  << endl;
 					if (r.el != "span")
 					{
-						stylesheet.push_back(r);
+						cssRule::stylesheet.push_back(r);
 					}
 				}
 			}
@@ -379,7 +380,7 @@ void cleaner()
 				// cout << "el: " << ayo.el << endl;
 				if (ayo.worthwhile)
 				{ // ignore the body type elements
-					stylesheet.push_back(ayo);
+					cssRule::stylesheet.push_back(ayo);
 				}
 			}
 		}
@@ -436,14 +437,11 @@ void cleaner()
 				}
 				listSwitch = ((inList && !closing) || (currentEl == "li")); // there. my god.
 
-				if (currentEl == "table") // don't turn on the table switch bc that's more for handling tds
+				if (currentEl == "table" && !closing) // don't turn on the table switch bc that's more for handling tds
 				{
 					cout << "ooo we are in a tableeee" << endl;
 					parentEl = currentEl;
-					if (!closing)
-					{
-						tables++; // increment this
-					}
+					tables++; // increment this
 				}
 
 				// i think the way this n all the switches work might be causing issues w/the list turning off
@@ -489,40 +487,41 @@ void cleaner()
 							innerHTML = innerHTML.substr(0, innerHTML.length() - 5);
 						}
 
-						regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)([^<]+)?(</span>)"); // picks out spans whereing 0 is token, 1 is full span element, 2 is class name, 3 is last digit/letter of said class, 4 is inner html, and 5 is the closing tag
-						// regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)"); // picks the first span only; full class name will be 2
-						if (regex_search(innerHTML, spanner))
-						{
-							cout << "there are spans to take care of in this li." << endl;
-							// cout << innerHTML << endl;
-							while (regex_search(innerHTML, spanner))
-							{
+						// regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)([^<]+)?(</span>)"); // picks out spans whereing 0 is token, 1 is full span element, 2 is class name, 3 is last digit/letter of said class, 4 is inner html, and 5 is the closing tag
+						// // regex spanner("(<span\\sclass=\"((\\w|\\d|\\-)+)\">)"); // picks the first span only; full class name will be 2
+						// if (regex_search(innerHTML, spanner))
+						// {
+						// 	cout << "there are spans to take care of in this li." << endl;
+						// 	// cout << innerHTML << endl;
+						// 	while (regex_search(innerHTML, spanner))
+						// 	{
 
-								regex_iterator cow(innerHTML.begin(), innerHTML.end(), spanner);
-								for (int i{0}; i < (*cow).size(); i++) { 
-									cout << i << ". " << (*cow)[i] << endl;
-								}
-								// const string currSpan{(*cow)[0].str()};
-								const string currKlass{(*cow)[2].str()};
-								daRule = getRule(currKlass); // we can reuse this. i don't see why not
-								relevant = daRule.second;
-								// string inner{(*cow)[4].str()};
-								// if (daRule.first) {
-								// 	inner = relevant.printTag() + inner + relevant.printClose();
-								// }
-								// innerHTML = regex_replace((*cow)[0], inner);
+						// 		regex_iterator cow(innerHTML.begin(), innerHTML.end(), spanner);
+						// 		for (int i{0}; i < (*cow).size(); i++) {
+						// 			cout << i << ". " << (*cow)[i] << endl;
+						// 		}
+						// 		break;
+						// 		// const string currSpan{(*cow)[0].str()};
+						// 		const string currKlass{(*cow)[2].str()};
+						// 		daRule = getRule(currKlass); // we can reuse this. i don't see why not
+						// 		relevant = daRule.second;
+						// 		// string inner{(*cow)[4].str()};
+						// 		// if (daRule.first) {
+						// 		// 	inner = relevant.printTag() + inner + relevant.printClose();
+						// 		// }
+						// 		// innerHTML = regex_replace((*cow)[0], inner);
 
-								// cout << "replacing [" << currSpan << "] with [" << (daRule.first ? relevant.printTag() : "") << "]." << endl;
+						// 		// cout << "replacing [" << currSpan << "] with [" << (daRule.first ? relevant.printTag() : "") << "]." << endl;
 
-								// // cout << "daRule.first ? " << daRule.first << " relevant.printTag() " << relevant.printTag() << endl;
+						// 		// // cout << "daRule.first ? " << daRule.first << " relevant.printTag() " << relevant.printTag() << endl;
 
-								// innerHTML = regex_replace(innerHTML, regex(currSpan), daRule.first ? relevant.printTag() : ""); // whether they get removed or simply printed differently depends on whether the span Matters
-								
-								// cout << "and replacing [</span>] with [" << (daRule.first ? relevant.printClose() : "") << "]." << endl;
-								// // cout << "and replacin"
-								// innerHTML = regex_replace(innerHTML, regex("</span>"), daRule.first ? relevant.printClose() : "");
-							}
-						}
+						// 		// innerHTML = regex_replace(innerHTML, regex(currSpan), daRule.first ? relevant.printTag() : ""); // whether they get removed or simply printed differently depends on whether the span Matters
+
+						// 		// cout << "and replacing [</span>] with [" << (daRule.first ? relevant.printClose() : "") << "]." << endl;
+						// 		// // cout << "and replacin"
+						// 		// innerHTML = regex_replace(innerHTML, regex("</span>"), daRule.first ? relevant.printClose() : "");
+						// 	}
+						// }
 
 						regex spaces("^\\s+"); // get spaces from the start
 						// regex_match(untrimmed, smidge, spaces);
@@ -553,6 +552,7 @@ void cleaner()
 				}
 				else if (currentEl == "td") // table handling
 				{
+					// i don't know why this works but doing "tableSwitch = !closing" doesn't but i guess we just have to live like this now
 					if (!closing)
 					{
 						// if it's not closing, then we turn some switch on or off or w/e
@@ -562,7 +562,8 @@ void cleaner()
 					{
 						// otherwise, closing td gets added to the pls, closing tr gets pushed to linear, n we do some switching stuff
 						tableSwitch = false;
-						(*sanPtr) += cleanLine; //
+						
+						(*sanPtr) += cleanLine; // closing td gets added to the pls, closing tr gets pushed to linear, n we do some switching stuff
 
 						pls += *sanPtr; // add the sanPtr to pls
 						(*sanPtr).reset();
@@ -606,6 +607,8 @@ void cleaner()
 								cleanLine << relevant.printTag(); // only print this if the previous element was the same as the current element...?
 							}
 
+							// cleanLine << relevant.printTag(); // with the new modifications made to the class, we shouldn't have to check for anything now
+
 							if (currentEl == "span")
 							{
 								// adjust the trim away bit
@@ -617,10 +620,10 @@ void cleaner()
 									cleanLine << relevant.printClose();
 								}
 							}
-							else
-							{
-								cout << "wadda hell thing are we trying to close: " << currentEl << endl;
-							}
+							// else
+							// {
+							// 	cout << "wadda hell thing are we trying to close: " << currentEl << endl;
+							// }
 						}
 						else
 						{
@@ -959,7 +962,7 @@ pair<bool, cssRule> getRule(string &str)
 	cssRule t;
 	bool m{false};
 	// pair<bool, cssRule> p;
-	for (auto r : stylesheet)
+	for (auto r : cssRule::stylesheet)
 	{
 		if (r.klass == str)
 		{
@@ -979,7 +982,7 @@ pair<bool, cssRule> getRule(const string str)
 	cssRule t;
 	bool m{false};
 	// pair<bool, cssRule> p;
-	for (auto r : stylesheet)
+	for (auto r : cssRule::stylesheet)
 	{
 		if (r.klass == str)
 		{
@@ -996,7 +999,7 @@ pair<bool, cssRule> getRule(string &e, string &c, string &g)
 	// same as just the class but this time we specify other things lol
 	cssRule t(e, c, g);
 	bool m{false};
-	for (auto r : stylesheet)
+	for (auto r : cssRule::stylesheet)
 	{
 		if (r.klass == c)
 		{
@@ -1010,14 +1013,17 @@ pair<bool, cssRule> getRule(string &e, string &c, string &g)
 
 void snip()
 {
+	snip(tmp);
+}
+void snip(string &s) {
 	try
 	{
-		tmp.erase(tmp.begin(), tmp.begin() + trimAway);
+		s.erase(s.begin(), s.begin() + trimAway);
 	}
 	catch (out_of_range)
 	{
 		cout << "out of range!!" << endl;
-		tmp = "";
+		s = "";
 	}
 }
 
