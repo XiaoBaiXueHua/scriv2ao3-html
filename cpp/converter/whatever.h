@@ -92,7 +92,7 @@ public:
 	// ruby(string);
 
 	static string rubyregex;
-	static int splitOpt; // this gets enumerated in the config function process
+	// static int splitOpt; // this gets enumerated in the config function process
 	static bool process;
 	static pair<int, int> weh; // this is for the submatch indeces for the ruby base n ruby text
 
@@ -106,7 +106,7 @@ protected:
 	// cssRule rParent{"ruby", "ruby"}, rb{"rbc", "rb"}, rt{"rtc", "rt"};
 };
 
-int ruby::splitOpt{5}; // default is nosplit, since apparently ao3 doesn't actually allow for <rb> and <rbc> tags.
+// int ruby::splitOpt{5}; // default is nosplit, since apparently ao3 doesn't actually allow for <rb> and <rbc> tags.
 bool ruby::process{true};
 string ruby::rubyregex{"\\((.*?)\\s\\|\\s(.*?)\\)"};
 pair<int, int> ruby::weh = make_pair(1, 2);

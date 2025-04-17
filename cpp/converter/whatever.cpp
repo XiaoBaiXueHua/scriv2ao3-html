@@ -282,20 +282,24 @@ string sanitize::findAndSanitize(string &str)
 	}
 
 	// and then perhaps finally, ruby text
-	smatch s;
-	if (regex_search(tmp, regex(ruby::rubyregex)))
+	if (ruby::process) // only do it if it's been configured
 	{
-		while (regex_search(tmp, s, regex(ruby::rubyregex)))
+		smatch s;
+		if (regex_search(tmp, regex(ruby::rubyregex)))
 		{
-			string syoink{s.str()};
-			// cout << "the search result match in s: " << syoink << endl;
-			// for (int k{0}; k < s.size(); k++) {
-			// 	cout << k << ". " << s[k] << endl;
-			// }
-			string lulu{"<ruby>" + s[ruby::weh.first].str() + "<rp> (</rp><rt>" + s[ruby::weh.second].str() + "</rt><rp>)</rp></ruby>"}; // this is all we can really do with it for now u_u
-			long long unsigned int p{tmp.find(syoink)}; // position of this ruby
-			// ruby roo(s.str()); // make a ruby out of it
-			tmp.replace(p, syoink.length(), lulu); // so apparently the way replace() and substr() work is that the second number is the how far out from the first number you actually wanted to go.
+			while (regex_search(tmp, s, regex(ruby::rubyregex)))
+			{
+				string syoink{s.str()};
+				// cout << "the search result match in s: " << syoink << endl;
+				// for (int k{0}; k < s.size(); k++) {
+				// 	cout << k << ". " << s[k] << endl;
+				// }
+				string lulu{"<ruby>" + s[ruby::weh.first].str() + "<rp> (</rp><rt>" + s[ruby::weh.second].str() + "</rt><rp>)</rp></ruby>"}; // this is all we can really do with it for now u_u
+				
+				long long unsigned int p{tmp.find(syoink)};	 // position of this ruby
+
+				tmp.replace(p, syoink.length(), lulu); // so apparently the way replace() and substr() work is that the second number is the how far out from the first number you actually wanted to go.
+			}
 		}
 	}
 	return tmp;
