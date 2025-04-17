@@ -10,8 +10,6 @@ void makeDir(string);
 void open(string &, filesystem::directory_entry, fstream &); // opens up the stream
 string tupper(string);
 bool tf(string);
-pair<bool, cssRule> getRule(string &);
-pair<bool, cssRule> getRule(const string);
-pair<bool, cssRule> getRule(string &, string &, string &);
+bool includes(string k, cssRule &c);  // k for class
 
 #endif

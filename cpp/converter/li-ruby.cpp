@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -6,9 +5,11 @@
 #include <sstream>
 #include "whatever.h" // has dependencies on cssRule and sanitize
 #include "li-ruby.h"
+#include "friends.h"
 
 using namespace std;
 
+// bool includes(string k, cssRule c)
 
 /* li */
 li::li(string s)
@@ -62,18 +63,7 @@ string li::cleanSpan(string span)
 }
 bool li::incl(string k) // k for class
 {
-	bool t{false};
-	// anyway search through the thing
-	for (cssRule rule : cssRule::stylesheet)
-	{
-		if (rule.klass == k)
-		{
-			t = true;
-			r = rule;
-			break;
-		}
-	}
-	return t;
+	return includes(k, r);
 }
 
 ostream &operator<<(ostream &os, const li &l)
@@ -82,11 +72,11 @@ ostream &operator<<(ostream &os, const li &l)
 	return os;
 }
 
-
 /* ruby */
 
 /* operator overloading */
-sanitize &operator<<(sanitize &san, const ruby &r) {
+sanitize &operator<<(sanitize &san, const ruby &r)
+{
 	// san.innerHTML
 	return san;
 }

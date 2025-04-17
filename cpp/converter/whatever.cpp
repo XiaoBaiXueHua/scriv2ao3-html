@@ -356,7 +356,8 @@ ostream &operator<<(ostream &os, const sanitize &san)
 			}
 			i += copy.indeces[j]; // add this for the next loop's starting point
 		}
-		os << endl << setw(copy.indent) << ""; // and then tab it in preparation for the closing tag
+		os << endl
+		   << setw(copy.indent) << ""; // and then tab it in preparation for the closing tag
 	}
 	else
 	{

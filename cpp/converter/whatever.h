@@ -75,7 +75,6 @@ protected:
 	string innerHTML{""};
 };
 
-
 class sanitize : public cssRule
 {
 public:
@@ -88,9 +87,10 @@ public:
 	void init(string s);
 
 	string cleanup();
-	string findAndSanitize(string &str);
+	string findAndSanitize(string &);
 	string str();
-	void debug(bool inclHTML);
+	void debug(bool);
+
 	// operator overloading
 	friend ostream &operator<<(ostream &, const sanitize &); // printing out the thing out
 	sanitize operator+=(const string &);
@@ -114,11 +114,12 @@ public:
 	static string hrStr;
 
 	friend class ruby;
+
 private:
 protected:
 	cssRule rule;
-	bool hr{false}; // horizontal rule type tags
-	long unsigned int indent{0};	// rowCells for knowing the number of children a <tr> has
+	bool hr{false};				 // horizontal rule type tags
+	long unsigned int indent{0}; // rowCells for knowing the number of children a <tr> has
 
 	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested
 

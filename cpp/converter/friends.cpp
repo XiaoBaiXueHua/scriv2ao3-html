@@ -86,7 +86,7 @@ void open(string &folder, filesystem::directory_entry p, fstream &fstr)
 	string op{folder + "/" + currentPath() + ((options::consolidate && folder != options::copyFolder) ? "index" : p.path().stem().string()) + ".html"};
 	// should only really be a thing for the cleaned, so this should be our final output path as a string
 	// cleaned.open(p.path());
-	cout << "Now opening: " << op << endl;
+	// cout << "Now opening: " << op << endl;
 	options::consolidate ? fstr.open(op, ios::app) : fstr.open(op);
 	if (!fstr.is_open())
 	{
@@ -124,58 +124,21 @@ bool tf(string s)
 	}
 }
 
-pair<bool, cssRule> getRule(string &e, string &c, string &g)
+// can't figure out how to make this a static function of cssRule
+bool includes(string k, cssRule &c)  // k for class
 {
-	// same as just the class but this time we specify other things lol
-	cssRule t(e, c, g);
-	bool m{false};
-	for (auto r : cssRule::stylesheet)
+	bool t{false};
+	// anyway search through the thing
+	for (cssRule rule : cssRule::stylesheet)
 	{
-		if (r.klass == c)
+		if (rule.klass == k)
 		{
-			t = r;
-			m = true;
+			t = true;
+			c = rule;
+			// cout << "static stylesheet includes class " << k << endl;
+			// cout << "relevant rule's el: " << c.el << "\tparent: " << c.parent << "\tdisplay: " << c.display << endl;
 			break;
 		}
 	}
-	return make_pair(m, t);
-}
-
-pair<bool, cssRule> getRule(const string str)
-{
-	//
-	cssRule t;
-	bool m{false};
-	// pair<bool, cssRule> p;
-	for (auto r : cssRule::stylesheet)
-	{
-		if (r.klass == str)
-		{
-			t = r;
-			m = true;
-			break;
-		}
-	}
-	// p = make_pair(m, t);
-	return make_pair(m, t);
-}
-
-pair<bool, cssRule> getRule(string &str)
-{
-	// gets a css rule from the stylesheet vector based on the class name given
-	cssRule t;
-	bool m{false};
-	// pair<bool, cssRule> p;
-	for (auto r : cssRule::stylesheet)
-	{
-		if (r.klass == str)
-		{
-			// cout << "located the class \"" << str << "\"." << endl;
-			t = r;
-			m = true;
-			break;
-		}
-	}
-	// p = make_pair(m, t);
-	return make_pair(m, t);
+	return t;
 }

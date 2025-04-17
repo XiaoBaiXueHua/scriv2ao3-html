@@ -26,7 +26,6 @@ protected:
 
 ostream &operator<<(ostream &, const li &);
 
-
 class ruby
 {
 	// should have two cssRules, one for the base n one for the text
