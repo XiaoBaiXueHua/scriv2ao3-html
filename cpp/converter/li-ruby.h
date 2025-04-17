@@ -8,9 +8,8 @@
 
 using namespace std;
 
-class li
+class li // actually i think it might be time to make a class for this one.
 {
-	// actually i think it might be time to make a class for this one.
 public:
 	li() {};
 	li(string);

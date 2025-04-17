@@ -8,25 +8,20 @@
 #include <regex>
 #include <algorithm>
 #include <cmath>
+#include "options.h"
 #include "whatever.h" // has cssRule and sanitize
 #include "whatever.cpp"
 #include "li-ruby.h"
 #include "li-ruby.cpp"
+#include "friends.h"
+#include "friends.cpp"
 
 using namespace std;
 
-// configuration vars
-bool configured{false}, prettify{true}, navigator{true}, recursive{false}, consolidate{false}, copysrc{false}, deletesrc{false}, batch{false};
-char setf('\t');
-unsigned int tabMultiplicity{1}; // how many chars should be printed at a time
-string htmlFolder{"html"}, outputFolder{"output"}, copyFolder{"converted"}, hr{"~***~"};
-
 fstream raw, cleaned, copier; // input/output streams + a copier to keep a copy of the original exported html n subsequently delete the original from the html-to-process folder
 stringstream sstr, sstr2;
-filesystem::directory_entry currFile{htmlFolder}; // current file, initialized to the html folder
-vector<filesystem::directory_entry> entries;	  // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
-vector<string> fileMaze{};
-// vector<cssRule> stylesheet;
+filesystem::directory_entry currFile{options::htmlFolder}; // current file, initialized to the html folder
+vector<filesystem::directory_entry> entries;			   // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
 string tmp{""}, tmp2{""}, tmp3{""};
 string innerHTML{""};
 string full{""}, guts{""};
@@ -35,81 +30,21 @@ stringstream cleanLine;
 sanitize pls;
 
 smatch smidge;
-bool hasDirectory{false}, listSwitch{false}, tableSwitch{false};
-int convertOpt{0}, trimAway{0}, tables{0};
+bool listSwitch{false}, tableSwitch{false};
+int convertOpt{0}, trimAway{0};
 
 void explorer();
 void resetEntries();
 void resetEntries(bool);
 void showEntries();
-void showMaze();
 void cleaner();
-pair<bool, cssRule> getRule(string &);
-pair<bool, cssRule> getRule(const string);
-pair<bool, cssRule> getRule(string &, string &, string &);
-void snip();
+void snip(); // makes a default version of snip for this file
+
 void pushLine(vector<sanitize> &);		 // both pls && cleanLine are global, so this doesn't need to take those as args
 void pushLine(vector<sanitize> &, bool); // conditional version
 void pushLine(sanitize &, vector<sanitize> &, bool);
 
-string currentPath(); // returns the maze up to the current folder
-void makeDir();
-void makeDir(string);
-void open(string &, filesystem::directory_entry , fstream &); // opens up the stream
-
-void resetCurrentPath(filesystem::directory_entry e)
-{
-	//
-	if (e.path().has_parent_path())
-	{
-		fileMaze.clear(); // clear this out
-		if (!regex_search(e.path().parent_path().string(), regex(string("^" + htmlFolder + "$"))))
-		{
-			tmp3 = e.path().parent_path().string().substr(htmlFolder.length() + 1); // parent path
-			cout << tmp3 << " has more than just html as a parent. " << endl;
-			// cout << "this entry's parent path is Only html/" << endl;
-			int i{0};
-			sstr2.clear();
-			sstr2 << tmp3;
-			cout << "new folder structure: " << endl;
-			while (getline(sstr2, tmp2, '\\'))
-			{
-
-				cout << "\"" << tmp2 << "\"" << endl;
-				if (tmp2 != htmlFolder)
-				{
-
-					fileMaze.push_back(tmp2); // remake this, n make sure NOT to include the html path
-				}
-			}
-		}
-	}
-}
-string tupper(string s)
-{
-	string u{""};
-	for (const char c : s)
-	{
-		u += toupper(c);
-	}
-	return u;
-}
-
-bool tf(string s)
-{
-	if (tupper(s) == "TRUE" || s == "1")
-	{
-		return true;
-	}
-	else if (tupper(s) == "FALSE" || s == "0")
-	{
-		return false;
-	}
-	else
-	{
-		throw new logic_error("hey man. keywords true/false or 1/0 only.");
-	}
-}
+// void open(string &, filesystem::directory_entry , fstream &);
 
 void configure()
 {
@@ -119,7 +54,7 @@ void configure()
 		// if it opens
 		cout << "...configuring..." << endl;
 		resetEntries(true); // silently initialize the entry vector
-		configured = true;
+		options::configured = true;
 		convertOpt = 3; // default is just one n you choose
 
 		vector<string> config = {};
@@ -138,61 +73,61 @@ void configure()
 				if (uc == "RECURSIVE" || uc == "BATCH" || uc == "OPT")
 				{
 					// if either of these are turned on, then that means the user probably knows what they want n don't need to be asked what option they'd like
-					navigator = false;
+					options::navigator = false;
 				}
 				// now analyze the thing
 				if (uc == "SRC")
 				{
-					htmlFolder = config[1];
-					currFile = filesystem::directory_entry(htmlFolder); // set this as well
+					options::htmlFolder = config[1];
+					currFile = filesystem::directory_entry(options::htmlFolder); // set this as well
 				}
 				else if (uc == "PRETTIFY")
 				{
-					prettify = tf(config[1]);
+					options::prettify = tf(config[1]);
 				}
 				else if (uc == "SETFILL")
 				{
 					// no matter what, will only take the first char
 					if (config[1] == "tab")
 					{
-						setf = '\t';
+						options::setf = '\t';
 					}
 					else if (config[1] == "space")
 					{
-						setf = ' ';
+						options::setf = ' ';
 					}
 					else
 					{
-						setf = char(config[1][0]); // otherwise, just take the first char of the string
+						options::setf = char(config[1][0]); // otherwise, just take the first char of the string
 					}
 				}
 				else if (uc == "BATCH")
 				{
-					batch = tf(config[1]);
+					options::batch = tf(config[1]);
 				}
 				else if (uc == "RECURSIVE")
 				{
-					recursive = tf(config[1]);
+					options::recursive = tf(config[1]);
 				}
 				else if (uc == "CONSOLIDATE")
 				{
-					consolidate = tf(config[1]);
+					options::consolidate = tf(config[1]);
 				}
 				else if (uc == "DELETESRC")
 				{
-					deletesrc = tf(config[1]);
+					options::deletesrc = tf(config[1]);
 				}
 				else if (uc == "COPYSRC")
 				{
-					copysrc = tf(config[1]);
+					options::copysrc = tf(config[1]);
 				}
 				else if (uc == "COPYFOLDER")
 				{
-					copyFolder = config[1];
+					options::copyFolder = config[1];
 				}
 				else if (uc == "HRSTR")
 				{
-					hr = config[1];
+					options::hr = config[1];
 				}
 				else if (uc == "OPT")
 				{
@@ -201,7 +136,7 @@ void configure()
 				}
 				else if (uc == "OUTPUTFOLDER")
 				{
-					outputFolder = config[1];
+					options::outputFolder = config[1];
 				}
 
 				sstr.clear(); // clear it at the end
@@ -209,19 +144,6 @@ void configure()
 			}
 		}
 
-		// now that we're out,
-		if (navigator && convertOpt == 0)
-		{
-			// so if we have the recursive/consolidation settings, like, set, then we should set convertOpt based on said settings
-			if (batch && recursive)
-			{
-				convertOpt = 2;
-			}
-			else if (batch)
-			{
-				convertOpt = 1;
-			}
-		}
 		cout << "config complete." << endl;
 	}
 	else
@@ -236,14 +158,28 @@ int main()
 {
 	configure(); // configure first n foremost
 
+	// now that we're out, see if we can make any determinations abt convertOpt
+	if (options::navigator && convertOpt == 0)
+	{
+		// so if we have the recursive/consolidation settings, like, set, then we should set convertOpt based on said settings
+		if (options::batch && options::recursive)
+		{
+			convertOpt = 2;
+		}
+		else if (options::batch)
+		{
+			convertOpt = 1;
+		}
+	}
+
 	// pass along our static vars
-	sanitize::prettify = prettify;
-	sanitize::fill = setf;
-	sanitize::hrStr = hr;
+	sanitize::prettify = options::prettify;
+	sanitize::fill = options::setf;
+	sanitize::hrStr = options::hr;
 
-	cleaned << setfill(setf); // set this to tabs
+	cleaned << setfill(options::setf); // set this to tabs
 
-	if (!configured || navigator)
+	if (!options::configured || options::navigator)
 	{
 		// if it's not been configured, then naturally we will show the entries n options n stuff
 		showEntries();
@@ -322,6 +258,7 @@ int main()
 	return 0;
 }
 
+/* THE MAIN PROCESSING FUNCTION */
 void cleaner()
 {
 	cout << "Now cleaning: " << currFile.path().stem() << endl
@@ -329,11 +266,12 @@ void cleaner()
 	resetCurrentPath(currFile); // only do it once per file opened
 
 	raw.open(currFile.path()); // open the raw
-	if (copysrc) {
+	if (options::copysrc)
+	{
 		// open the copy stream
-		open(copyFolder, currFile, copier);
+		open(options::copyFolder, currFile, copier);
 	}
-	open(outputFolder, currFile, cleaned); // open the output
+	open(options::outputFolder, currFile, cleaned); // open the output
 
 	sanitize *sanPtr = new sanitize;
 
@@ -355,10 +293,14 @@ void cleaner()
 	// go through the whole thing once
 	while (getline(raw, tmp))
 	{
-		if (copysrc) {
+		if (options::copysrc)
+		{
 			copier << tmp << endl; // make da copy
 		}
-		if (raw.eof()) { break; } // break at eof
+		if (raw.eof())
+		{
+			break;
+		} // break at eof
 
 		bodyLine++;
 		string untrimmed{tmp}; // untrimmed version for list items maybe
@@ -803,20 +745,21 @@ void cleaner()
 		}
 	}
 
-	if (consolidate)
+	if (options::consolidate)
 		cleaned << "<hr />" << endl; // before closing the streams, add an hr btwn docs if they're to be consolidated
 
 	raw.close(); // close the streaaaaams
 	cleaned.close();
-	if (copysrc) {
+	if (options::copysrc)
+	{
 		copier.close();
 	}
 
-	
 	sanPtr = nullptr;
 	delete sanPtr;
 }
 
+/* NAVIGATIONAL  */
 void explorer() // transforms convertOpt
 {
 	int dirNav{0};
@@ -834,12 +777,12 @@ void explorer() // transforms convertOpt
 					if (dirNav > -1)
 					{
 						currFile = entries[dirNav - 1];
-						fileMaze.push_back(currFile.path().stem().string());
+						options::fileMaze.push_back(currFile.path().stem().string());
 					}
 					else
 					{
 						cout << "Well, now you're SUPPOSED to be going back up a file." << endl;
-						fileMaze.pop_back(); // otherwise remove the current directory from the file maze
+						options::fileMaze.pop_back(); // otherwise remove the current directory from the file maze
 						try
 						{
 							currFile = filesystem::directory_entry{currFile.path().parent_path()};
@@ -872,7 +815,6 @@ void explorer() // transforms convertOpt
 		}
 	}
 }
-
 void resetEntries()
 {
 	resetEntries(false); // default is verbose
@@ -883,8 +825,8 @@ void resetEntries(bool silence)
 	{
 		cout << "currFile: " << currFile << endl;
 	}
-	entries.clear();	  // start by clearing out the vector for display things
-	hasDirectory = false; // reset this
+	entries.clear();			   // start by clearing out the vector for display things
+	options::hasDirectory = false; // reset this
 	int numFiles{0};
 	for (auto const &dir_entry : filesystem::directory_iterator{currFile})
 	{
@@ -893,7 +835,7 @@ void resetEntries(bool silence)
 		{
 			if (dir_entry.is_directory())
 			{
-				hasDirectory = true;
+				options::hasDirectory = true;
 			}
 			entries.push_back(dir_entry);
 			numFiles++;
@@ -904,7 +846,6 @@ void resetEntries(bool silence)
 		}
 	}
 }
-
 void showEntries()
 {
 	resetEntries();
@@ -914,7 +855,7 @@ void showEntries()
 		cout << "\t1. Convert all files (but not sub-folders)." << endl;
 		cout << "\t2. Convert all files and sub-folder files." << endl;
 		cout << "\t3. Convert only some of the files shown." << endl;
-		if (hasDirectory)
+		if (options::hasDirectory)
 		{
 			cout << "\t4. Look through one of the sub-folders listed." << endl;
 		}
@@ -927,71 +868,6 @@ void showEntries()
 		cout << "Hey!! This thing's empty!!!!!!!!!!!!!!!!" << endl;
 		exit(0);
 	}
-}
-
-void showMaze()
-{
-	cout << "The maze navigation looks like: " << endl;
-	for (auto const &entry : fileMaze)
-	{
-		cout << entry << " / ";
-	}
-	cout << endl;
-}
-
-pair<bool, cssRule> getRule(string &str)
-{
-	// gets a css rule from the stylesheet vector based on the class name given
-	cssRule t;
-	bool m{false};
-	// pair<bool, cssRule> p;
-	for (auto r : cssRule::stylesheet)
-	{
-		if (r.klass == str)
-		{
-			// cout << "located the class \"" << str << "\"." << endl;
-			t = r;
-			m = true;
-			break;
-		}
-	}
-	// p = make_pair(m, t);
-	return make_pair(m, t);
-}
-
-pair<bool, cssRule> getRule(const string str)
-{
-	//
-	cssRule t;
-	bool m{false};
-	// pair<bool, cssRule> p;
-	for (auto r : cssRule::stylesheet)
-	{
-		if (r.klass == str)
-		{
-			t = r;
-			m = true;
-			break;
-		}
-	}
-	// p = make_pair(m, t);
-	return make_pair(m, t);
-}
-pair<bool, cssRule> getRule(string &e, string &c, string &g)
-{
-	// same as just the class but this time we specify other things lol
-	cssRule t(e, c, g);
-	bool m{false};
-	for (auto r : cssRule::stylesheet)
-	{
-		if (r.klass == c)
-		{
-			t = r;
-			m = true;
-			break;
-		}
-	}
-	return make_pair(m, t);
 }
 
 void snip()
@@ -1025,65 +901,5 @@ void pushLine(sanitize &s, vector<sanitize> &v, bool c)
 	{
 		v.push_back(s);
 		s.reset();
-	}
-}
-
-string currentPath()
-{
-	string t{""};
-	for (auto const &entry : fileMaze)
-	{
-		t += entry + "/";
-	}
-	return t;
-}
-
-void makeDir(string s) {
-	// string op{outputFolder};
-	if (!filesystem::directory_entry(s).exists())
-	{
-		filesystem::create_directory(s); // make the output folder if dne
-	}
-	for (auto const &ent : fileMaze)
-	{
-		s += "/" + ent;
-		if (!filesystem::directory_entry(s).exists())
-		{
-			// if a particular subfolder doesn't exist, then create it
-			filesystem::create_directory(s + "/");
-			cout << "Now creating directory: " << tmp << endl;
-		}
-	}
-}
-
-void makeDir()
-{
-	makeDir(outputFolder);
-}
-
-void open(string &folder, filesystem::directory_entry p, fstream &fstr)
-{
-	if (fstr.is_open()) {
-		// if it's already open, like if i forgot to close it, then close it again. ehe
-		fstr.close();
-	}
-
-	makeDir(); // make the directories if necessary
-	if (copysrc) {
-		makeDir(copyFolder);
-	}
-
-	string op{folder + "/" + currentPath() + ((consolidate && folder != copyFolder) ? "index" : p.path().stem().string()) + ".html"};
-	// should only really be a thing for the cleaned, so this should be our final output path as a string
-	// cleaned.open(p.path());
-	cout << "Now opening: " << op << endl;
-	consolidate ? fstr.open(op, ios::app) : fstr.open(op);
-	if (!fstr.is_open())
-	{
-		fstr.clear();
-		fstr.open(op, ios::out);
-		fstr.close();
-		consolidate ? fstr.open(op, ios::app) : fstr.open(op);
-		// cleaned.open(op);
 	}
 }
