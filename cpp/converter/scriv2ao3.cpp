@@ -37,6 +37,13 @@ int main()
 {
 	configure(); // configure first n foremost
 
+	if (!filesystem::exists(filesystem::directory_entry(options::htmlFolder))) {
+		// so if the source html folder doesn't exist, send notice and then exit
+		cout << "hiiii... we couldn't find your " << quoted(options::htmlFolder) << " folder... sowwie... we'll make it for you, but it'll be empty.\n\nplease enter any key to exit: ";
+		cin >> tmp;
+		filesystem::create_directory(options::htmlFolder); // make da thing
+		exit(0);
+	}
 	// now that we're out, see if we can make any determinations abt convertOpt
 	if (options::navigator && convertOpt == 0)
 	{
@@ -212,18 +219,27 @@ void resetEntries(bool silence)
 		filesystem::path currPath{dir_entry.path()};
 		if ((dir_entry.is_directory() && !regex_search(currPath.string(), regex("_files$"))) || regex_search(currPath.extension().string(), regex("html"))) // only includes html files or directories
 		{
-			if (dir_entry.is_directory())
+			if (!filesystem::is_empty(dir_entry)) // if it's not empty
 			{
-				options::hasDirectory = true;
+				if (dir_entry.is_directory())
+				{
+					options::hasDirectory = true;
+				}
+				entries.push_back(dir_entry);
+				numFiles++;
 			}
-			entries.push_back(dir_entry);
-			numFiles++;
+			else
+			{
+				filesystem::remove(dir_entry); // this... might not be the best idea. in case
+			}
+
 			if (!silence)
 			{
 				cout << setw(15) << numFiles << ". " << currPath.filename() << (dir_entry.is_directory() ? " (directory)" : "") << endl; // print this if not supposed to be silent
 			}
 		}
 	}
+
 }
 void showEntries()
 {

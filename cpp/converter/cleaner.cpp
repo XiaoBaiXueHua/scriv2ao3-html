@@ -40,7 +40,8 @@ cleaner::cleaner(filesystem::directory_entry e)
 cleaner::~cleaner()
 {
 
-	cout << "finished cleaning " << currFile.path().stem() << ".\n" << endl;
+	cout << "finished cleaning " << currFile.path().stem() << ".\n"
+		 << endl;
 	cout << "-------------------------" << "\n\n";
 	raw.close();
 	raw.clear();
@@ -54,6 +55,11 @@ cleaner::~cleaner()
 
 	sanPtr = nullptr;
 	delete sanPtr;
+	if (options::deletesrc)
+	{
+		cout << "Deleting " << currFile << "... bye bye!!!!" << endl;
+		filesystem::remove(currFile); // delete the file if that's true
+	}
 }
 
 void cleaner::snipe()
@@ -185,7 +191,7 @@ void cleaner::whoosh()
 				// cout << "currentEl: " << currentEl << "\t\tcurrentClass: " << currentClass << "\t\tguts: " << guts << endl;
 				relevant = cssRule(currentEl, currentClass, ""); // reset this
 
-				bool important{incl(currentClass)};	 // and then the "includes" function will automatically
+				bool important{incl(currentClass)};			   // and then the "includes" function will automatically
 				bool endling{((currentEl == "p") && closing)}; // for now just closing paragraphs; will adjust as needed later
 				// it also does not include "li" bc those get handled separately n will break on their own, so it would be redundant to include them in endling
 
