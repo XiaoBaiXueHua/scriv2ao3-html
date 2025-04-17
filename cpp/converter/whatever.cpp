@@ -3,6 +3,7 @@
 #include <vector>
 #include <regex>
 #include <sstream>
+#include "options.h"
 #include "whatever.h"
 
 using namespace std;
@@ -105,7 +106,12 @@ cssRule::cssRule(string r)
 		listMode = true;
 	}
 }
-
+cssRule::cssRule(string p, string c)
+{
+	// so far only really used for ruby text so eh?
+	el = c;
+	parent = p;
+}
 cssRule::cssRule(string e, string c, string g)
 {
 	// can also just make one from an element, class, and guts
@@ -128,6 +134,11 @@ cssRule::cssRule(string e, string c, string g)
 	{
 		el = "tr";
 		display = "table";
+	}
+	else if (el == "ruby" || el == "rb" || el == "rbc" || el == "rt" || el == "rtc")
+	{
+		display = "ruby";
+		// and then later we'll have to do some more specific stuff for parentage n whatever
 	}
 
 	parentage = (el != parent); // idk. might be useful later i suppose
@@ -271,12 +282,16 @@ string sanitize::findAndSanitize(string &str)
 		}
 	}
 
-	regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
+	// regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
+	// regex rby(ruby::rubyregex); // can we do this. i kind of don't think so.
 	// and then perhaps finally, ruby text
-	if (regex_search(tmp, ruby))
+	smatch s;
+	if (regex_search(tmp, s, regex(ruby::rubyregex)))
 	{
+		cout << "the search result match in s: " << s.str() << endl;
 		// new rubinator i guess
 		// rubinator(tmp);
+		ruby roo(s.str()); // make a ruby out of it
 	}
 	return tmp;
 }

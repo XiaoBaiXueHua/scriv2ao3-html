@@ -9,8 +9,6 @@
 
 using namespace std;
 
-// bool includes(string k, cssRule c)
-
 /* li */
 li::li(string s)
 {
@@ -73,10 +71,14 @@ ostream &operator<<(ostream &os, const li &l)
 }
 
 /* ruby */
+ruby::ruby(string r)
+{
+	// should Only serve us
+}
 
 /* operator overloading */
-sanitize &operator<<(sanitize &san, const ruby &r)
-{
-	// san.innerHTML
-	return san;
-}
+// sanitize &operator<<(sanitize &san, const ruby &r)
+// {
+// 	// san.innerHTML
+// 	return san;
+// }

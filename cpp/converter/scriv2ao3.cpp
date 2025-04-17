@@ -23,7 +23,7 @@ using namespace std;
 stringstream sstr, sstr2;
 filesystem::directory_entry currFile{options::htmlFolder}; // current file, initialized to the html folder
 
-vector<filesystem::directory_entry> entries;  // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
+vector<filesystem::directory_entry> entries; // the vector to help us navigate i guess! and also the entries thing for displaying the stuff
 string tmp{""}, tmp2{""}, tmp3{""};
 int convertOpt{0};
 
@@ -337,6 +337,47 @@ void configure()
 				else if (uc == "OUTPUTFOLDER")
 				{
 					options::outputFolder = config[1];
+				}
+				else if (uc == "PROCESSRUBY")
+				{
+					ruby::process = tf(config[1]);
+				}
+				else if (uc == "RUBYREGEX")
+				{
+					// options::rubyregex = regex_replace(config[1], regex("\\"), "\\\\");
+					ruby::rubyregex = config[1]; // trying to do a regex_replace here causes a crash
+				}
+				else if (uc == "RUBYSPLIT")
+				{
+					string ucr{tupper(config[1])};
+					if (regex_search(ucr, regex("^\\d+$")))
+					{
+						// so if it's nothing but numbers
+						ruby::splitOpt = stoi(ucr); // no we're not going to verify that shit. that's the user's problem.
+					}
+					else
+					{
+						if (ucr == "AUTO")
+						{
+							ruby::splitOpt = 1;
+						}
+						else if (ucr == "ASK")
+						{
+							ruby::splitOpt = 2;
+						}
+						else if (ucr == "LETTER")
+						{
+							ruby::splitOpt = 3;
+						}
+						else if (ucr == "WORD")
+						{
+							ruby::splitOpt = 4;
+						}
+						else if (ucr == "NOSPLIT")
+						{
+							ruby::splitOpt = 5;
+						}
+					}
 				}
 
 				sstr.clear(); // clear it at the end

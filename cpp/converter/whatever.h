@@ -1,5 +1,5 @@
-#ifndef SCRIV2AO3
-#define SCRIV2AO3
+#ifndef CSSRULEZ
+#define CSSRULEZ
 
 #include <iostream>
 #include <string>
@@ -50,7 +50,10 @@ class cssRule
 public:
 	cssRule() {};	 // default constructor
 	cssRule(string); // constructor from css stylesheet rule
-	cssRule(string e, string c, string g);
+
+	cssRule(string, string); // constructor for just parent and child
+
+	cssRule(string, string, string); // constructor from el, class, n guts
 
 	string printTag();
 	string printClose();
@@ -74,7 +77,37 @@ private:
 protected:
 	string innerHTML{""};
 };
+#endif
 
+#ifndef RUBINATOR
+#define RUBINATOR
+class ruby
+{
+	// should have two cssRules, one for the base n one for the text
+public:
+	ruby() {};
+	ruby(string);
+
+	static string rubyregex;
+	static int splitOpt; // this gets enumerated in the config function process
+	static bool process;
+
+	friend class sanitize;
+	// friend sanitize &operator<<(sanitize &, const ruby &);
+
+private:
+protected:
+	string rubyBase{""}, rubyText{""};
+	cssRule rParent{"ruby", "ruby"}, rb{"rbc", "rb"}, rt{"rtc", "rt"};
+};
+
+int ruby::splitOpt{2}; // default is ask
+bool ruby::process{true};
+string ruby::rubyregex{"\\((.*?)\\s\\|\\s(.*?)\\)"};
+#endif
+
+#ifndef SANITIZER
+#define SANITIZER
 class sanitize : public cssRule
 {
 public:

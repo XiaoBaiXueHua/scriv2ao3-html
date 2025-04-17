@@ -1,5 +1,5 @@
-#ifndef LI_RUBY
-#define LI_RUBY
+#ifndef LI_CLEANS
+#define LI_CLEANS
 #include <iostream>
 #include <string>
 #include <vector>
@@ -26,22 +26,7 @@ protected:
 
 ostream &operator<<(ostream &, const li &);
 
-class ruby
-{
-	// should have two cssRules, one for the base n one for the text
-public:
-	ruby() {};
-	ruby(string r)
-	{
-		//
-	}
-
-	friend sanitize &operator<<(sanitize &, const ruby &);
-
-private:
-protected:
-	string rubyBase{""}, rubyText{""};
-	cssRule rule;
-};
+// ruby class got moved to whatever.h to work with sanitize :<
+// its functions will probably be staying in li-ruby.cpp anyway tho
 
 #endif
