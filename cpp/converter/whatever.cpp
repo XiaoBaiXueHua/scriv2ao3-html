@@ -3,6 +3,7 @@
 #include <vector>
 #include <regex>
 #include <sstream>
+#include "options.h"
 #include "whatever.h"
 
 using namespace std;
@@ -105,7 +106,12 @@ cssRule::cssRule(string r)
 		listMode = true;
 	}
 }
-
+cssRule::cssRule(string p, string c)
+{
+	// so far only really used for ruby text so eh?
+	el = c;
+	parent = p;
+}
 cssRule::cssRule(string e, string c, string g)
 {
 	// can also just make one from an element, class, and guts
@@ -129,6 +135,11 @@ cssRule::cssRule(string e, string c, string g)
 		el = "tr";
 		display = "table";
 	}
+	else if (el == "ruby" || el == "rb" || el == "rbc" || el == "rt" || el == "rtc")
+	{
+		display = "ruby";
+		// and then later we'll have to do some more specific stuff for parentage n whatever
+	}
 
 	parentage = (el != parent); // idk. might be useful later i suppose
 }
@@ -140,6 +151,8 @@ string cssRule::closeParent() { return "</" + parent + ">"; }
 
 void cssRule::setIndex(int i) { tableIndex = i; } // ...we have to do it this way bc the ++ and -- operators are for the indents. ehe
 
+void cssRule::setHTML(string str) { innerHTML = str; };
+string cssRule::getHTML() { return innerHTML; };
 /* sanitize */
 /* constructors  */
 sanitize::sanitize(string s) : cssRule::cssRule() { init(s); }
@@ -179,12 +192,9 @@ string sanitize::cleanup()
 		if (rawSize() > 8192)
 		{
 			string cleanTmp{""};
-			long unsigned int i{0}, spacer{2048};
+			long unsigned int i{0}, spacer{2048}; // let's do this in nice safe increments of 2048
 			while (i < rawSize())
 			{
-				// let's do this in nice safe increments of 2048
-				// string sub{tmp.substr(i, i + 2048)};
-				// sub = ;
 				string sub{tmp.substr(i, i + spacer)};
 				// then do some checks to make sure we're not splitting up any escape codes
 				cleanTmp += findAndSanitize(sub);
@@ -271,12 +281,26 @@ string sanitize::findAndSanitize(string &str)
 		}
 	}
 
-	regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
 	// and then perhaps finally, ruby text
-	if (regex_search(tmp, ruby))
+	if (ruby::process) // only do it if it's been configured
 	{
-		// new rubinator i guess
-		// rubinator(tmp);
+		smatch s;
+		if (regex_search(tmp, regex(ruby::rubyregex)))
+		{
+			while (regex_search(tmp, s, regex(ruby::rubyregex)))
+			{
+				string syoink{s.str()};
+				// cout << "the search result match in s: " << syoink << endl;
+				// for (int k{0}; k < s.size(); k++) {
+				// 	cout << k << ". " << s[k] << endl;
+				// }
+				string lulu{"<ruby>" + s[ruby::weh.first].str() + "<rp> (</rp><rt>" + s[ruby::weh.second].str() + "</rt><rp>)</rp></ruby>"}; // this is all we can really do with it for now u_u
+				
+				long long unsigned int p{tmp.find(syoink)};	 // position of this ruby
+
+				tmp.replace(p, syoink.length(), lulu); // so apparently the way replace() and substr() work is that the second number is the how far out from the first number you actually wanted to go.
+			}
+		}
 	}
 	return tmp;
 }
@@ -329,6 +353,50 @@ void sanitize::reset()
 }
 
 /* sanitize operator overloads */
+ostream &operator<<(ostream &os, const sanitize &san)
+{
+	sanitize copy(san);
+	string nya{copy.cleanup()}; // might have to make this a stringstream
+	os << setfill(sanitize::fill);
+	if (!copy.hr)
+	{
+		os << copy.printTag();
+	}
+	if (copy.indeces.size() > 1 && sanitize::prettify)
+	{
+		if (copy.hr)
+		{
+			cout << "ohh. hmm. i suspect we were not supposed to splitter this. yet here we are, doing it anyway." << endl;
+		}
+
+		int i{0}; // keeps track of where in the string we currently are
+		for (int j{0}; j < copy.indeces.size(); j++)
+		{
+			if (copy.indeces[j] > 0) // prevent it from printing useless tabs n stuff
+			{
+				os << endl;						   // start a new line
+				os << setw(copy.indent + 1) << ""; // tab it
+				os << nya.substr(i, copy.indeces[j]);
+			}
+			i += copy.indeces[j]; // add this for the next loop's starting point
+		}
+		os << endl
+		   << setw(copy.indent) << ""; // and then tab it in preparation for the closing tag
+	}
+	else
+	{
+		// otherwise, just print it as it is
+		os << nya;
+	}
+
+	if (!copy.hr)
+	{
+		os << copy.printClose();
+	}
+
+	return os;
+}
+
 sanitize sanitize::operator+=(const string &str)
 {
 	innerHTML += str; // concatenate & continue
@@ -383,72 +451,6 @@ sanitize sanitize::operator--(int)
 	sanitize o = *this;
 	operator--();
 	return o;
-}
-
-/* li */
-li::li(string s)
-{
-	tmp = s;
-	regex spanner(sp);
-	if (regex_search(tmp, spanner))
-	{
-		long long unsigned int i;
-		while (regex_search(tmp, spanner))
-		{
-
-			i = {tmp.find("<span")};
-			if (i > 0) //
-			{
-				clean += tmp.substr(0, i); // add the orphans up front of the span
-				snip(tmp, i);
-			}
-
-			i = tmp.find("</span>") + 7; // automatically account for the length of the </span>
-			string spn{tmp.substr(0, i)};
-			clean += cleanSpan(spn);
-			snip(tmp, i);
-		}
-		// then add the rest of tmp to the clean line
-		clean += tmp;
-	}
-	else
-	{
-		clean = tmp; // otherwise we're free! we don't need to do any cleaning
-	}
-}
-
-string li::cleanSpan(string span)
-{
-	string t{""};
-	regex s(sp);
-	// match_results sm = regex_match(span, s);
-	smatch sm; // the way this works is that it needs to have that fuckin input string be Exactly. the same.
-	if (regex_match(span, sm, s))
-	{
-		t = sm[4].str(); // the inner html
-
-		if (incl(sm[2].str())) // if it's an important span, held in the static thing, then we also add the tags
-		{
-			t = r.printTag() + t + r.printClose();
-		}
-	}
-
-	return t;
-}
-bool li::incl(string k) // k for class
-{
-	bool t{false};
-	// anyway search through the thing
-	for (cssRule rule : cssRule::stylesheet)
-	{
-		if (rule.klass == k)
-		{
-			t = true;
-			r = rule;
-			break;
-		}
-	}
-	return t;
 }
 
 //

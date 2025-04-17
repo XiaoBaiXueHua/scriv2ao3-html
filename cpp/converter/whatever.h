@@ -1,11 +1,12 @@
-#ifndef SCRIV2AO3
-#define SCRIV2AO3
+#ifndef CSSRULEZ
+#define CSSRULEZ
 
 #include <iostream>
 #include <string>
 #include <vector>
 #include <regex>
 #include <sstream>
+
 using namespace std;
 
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
@@ -49,13 +50,18 @@ class cssRule
 public:
 	cssRule() {};	 // default constructor
 	cssRule(string); // constructor from css stylesheet rule
-	cssRule(string e, string c, string g);
+
+	cssRule(string, string); // constructor for just parent and child
+
+	cssRule(string, string, string); // constructor from el, class, n guts
 
 	string printTag();
 	string printClose();
 	string printParent();
 	string closeParent();
 	void setIndex(int);
+	void setHTML(string);
+	string getHTML();
 
 	// fuck it. everyone's public
 	string el{""}, klass{""}, rulez{""}, display{"inline"}, guts{""}, parent{""}; // "parent" is used for things like blockquotes n lists, which have important nesting happening
@@ -72,8 +78,42 @@ private:
 	// int indent{0};
 protected:
 	string innerHTML{""};
+	vector<int> indeces{0}; // starting index is always 0
+};
+#endif
+
+#ifndef RUBINATOR
+#define RUBINATOR
+class ruby // ...it turns out ao3 doesn't allow for <rb> and <rbc> elements, so there's no point in trying to do elaborate ruby splitting for now
+{
+	// should have two cssRules, one for the base n one for the text
+public:
+	// ruby() {};
+	// ruby(string);
+
+	static string rubyregex;
+	// static int splitOpt; // this gets enumerated in the config function process
+	static bool process;
+	static pair<int, int> weh; // this is for the submatch indeces for the ruby base n ruby text
+
+	friend class sanitize;
+	// friend sanitize &operator<<(sanitize &, const ruby &);
+
+private:
+// smatch smodge;
+protected:
+	// string rubyBase{""}, rubyText{""}, orig{""};
+	// cssRule rParent{"ruby", "ruby"}, rb{"rbc", "rb"}, rt{"rtc", "rt"};
 };
 
+// int ruby::splitOpt{5}; // default is nosplit, since apparently ao3 doesn't actually allow for <rb> and <rbc> tags.
+bool ruby::process{true};
+string ruby::rubyregex{"\\((.*?)\\s\\|\\s(.*?)\\)"};
+pair<int, int> ruby::weh = make_pair(1, 2);
+#endif
+
+#ifndef SANITIZER
+#define SANITIZER
 class sanitize : public cssRule
 {
 public:
@@ -86,9 +126,10 @@ public:
 	void init(string s);
 
 	string cleanup();
-	string findAndSanitize(string &str);
+	string findAndSanitize(string &);
 	string str();
-	void debug(bool inclHTML);
+	void debug(bool);
+
 	// operator overloading
 	friend ostream &operator<<(ostream &, const sanitize &); // printing out the thing out
 	sanitize operator+=(const string &);
@@ -111,109 +152,23 @@ public:
 	static char fill;
 	static string hrStr;
 
+	friend class ruby;
+
 private:
 protected:
 	cssRule rule;
-	bool hr{false}; // horizontal rule type tags
-	long unsigned int indent{0};	// rowCells for knowing the number of children a <tr> has
+	bool hr{false};				 // horizontal rule type tags
+	long unsigned int indent{0}; // rowCells for knowing the number of children a <tr> has
 
 	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested
 
 	// this is kind of hacked together for the moment, but it works for how the sanitizer currently functions
-	vector<int> indeces{0}; // starting index is always 0
 };
-
-/* sanitize operator overloads */ 
-/* they get sad if they're moved to another file */
-ostream &operator<<(ostream &os, const sanitize &san)
-{
-	sanitize copy(san);
-	string nya{copy.cleanup()}; // might have to make this a stringstream
-	os << setfill(sanitize::fill);
-	if (!copy.hr)
-	{
-		os << copy.printTag();
-	}
-	if (copy.indeces.size() > 1 && sanitize::prettify)
-	{
-		if (copy.hr)
-		{
-			cout << "ohh. hmm. i suspect we were not supposed to splitter this. yet here we are, doing it anyway." << endl;
-		}
-
-		int i{0}; // keeps track of where in the string we currently are
-		for (int j{0}; j < copy.indeces.size(); j++)
-		{
-			if (copy.indeces[j] > 0) // prevent it from printing useless tabs n stuff
-			{
-				os << endl;						   // start a new line
-				os << setw(copy.indent + 1) << ""; // tab it
-				os << nya.substr(i, copy.indeces[j]);
-			}
-			i += copy.indeces[j]; // add this for the next loop's starting point
-		}
-		os << endl
-		   << setw(copy.indent) << ""; // and then tab it in preparation for the closing tag
-	}
-	else
-	{
-		// otherwise, just print it as it is
-		os << nya;
-	}
-
-	if (!copy.hr)
-	{
-		os << copy.printClose();
-	}
-
-	return os;
-}
-
 
 // initialize the statics
 bool sanitize::prettify = true;
 char sanitize::fill = '\t';
 string sanitize::hrStr = "~***~"; // must either be an exact string or a regex
 vector<cssRule> cssRule::stylesheet = {};
-
-class li
-{
-	// actually i think it might be time to make a class for this one.
-public:
-	li() {};
-	li(string);
-	string cleanSpan(string);
-	bool incl(string);
-	friend ostream &operator<<(ostream &, const li &);
-
-private:
-	string sp{"(<span\\sclass=\"((\\w|\\d|\\-)+)\">)(.*?)(</span>)"}; // regex for spans i fucking guess
-protected:
-	string clean{""}, tmp{""};
-	cssRule r;
-};
-
-ostream &operator<<(ostream &os, const li &l)
-{
-	os << l.clean;
-	return os;
-}
-
-class ruby
-{
-	// should have two cssRules, one for the base n one for the text
-public:
-	ruby() {};
-	ruby(string r)
-	{
-		//
-	}
-
-	friend sanitize &operator<<(const sanitize &, const ruby &);
-
-private:
-protected:
-	string rubyBase{""}, rubyText{""};
-};
 
 #endif
