@@ -344,7 +344,6 @@ void configure()
 				}
 				else if (uc == "RUBYREGEX")
 				{
-					// options::rubyregex = regex_replace(config[1], regex("\\"), "\\\\");
 					ruby::rubyregex = config[1]; // trying to do a regex_replace here causes a crash
 				}
 				// else if (uc == "RUBYSPLIT")
@@ -381,10 +380,7 @@ void configure()
 				// }
 				else if (uc == "RUBYINDEX")
 				{
-					// string ints{config[1]}; // make a string of the current integers so we can clear config
-					// cout << tmp << endl;
 					vector<int> ints = {};
-					// config.clear();
 					sstr.clear();
 					sstr << config[1];
 					cout << sstr2.str() << endl;
