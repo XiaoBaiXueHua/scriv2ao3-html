@@ -1,0 +1,44 @@
+- okay, so. we need a function that'll show all the html files and directories in a folder, and then the user can either pick A File, or navigate to A Directory 
+	- "Convert these files, or navigate to sub-directory" sort of thing
+	- i think at this point, it's probably also a good idea to have the user specify whether they're looking to convert in a batch or just a single file from the start. like that was a good idea the first time; let's do that
+- anyway, in batch mode, you can either choose to convert all the files shown (return current directory), or navigate to a different directory, which will then do the same thing of showing you all the files n directories in that folder 
+	- give them the option to either convert all of them to separate files, or into one conglomerate file 
+		- if they want one conglomerate file, then also give them the option to pick the order they'll be converted in
+
+
+SO OVERALL THE INTERACTION SHOULD BE:
+
+- show all files and directories in the "html" folder 
+
+> Options 
+	1. Convert a single HTML file
+	2. Convert multiple HTML files.
+
+if 1 --> pick either a file shown, or navigate to diff directory to pick from there (rinse and repeat), then set the name, and do executor()
+
+if 2 --> then three options:
+	1. choose a different directory to look through --> rinse and repeat (if there are any subfolders in the current folder!!) (so this should be the last option?)
+	2. convert all files shown w/o consideration for the subfolders
+	3. convert all files shown, as well as all subfolder files 
+	4. convert only some of the files shown 
+
+	once one of these options has been selected, ask if each should be converted separately (default until later can add in the next bit as an expansion), or into a conglomerate 
+		if it's a conglomerate, then ask if the files should be converted in a particular order. if yes, then let them be reordered by numbers 
+			- also if a mistake was made, let them enter 'b' to go back?
+	either way, the files to be converted should have their paths pushed into a vector, which then gets looped through for the names --> executor()
+
+> anyway, then give option to loop with Y/y once done
+
+
+---------
+
+so basically, the explorer function should:
+	1. show all the entries in the provided folder 
+	2. offer the options 
+		2.1 if chosen to look through a diff directory, then call on itself again with the new filepath
+	3. return the directory entry selected?
+
+
+-----
+maybe instead we should just have a while loop for exploring the directory. like, if opt == 1, then while opt == 1, loop through explorer until opt !== 1 for once.
+in that case, what we'd actually want explorer() to be is a VOID function which determines the value of global var opt.

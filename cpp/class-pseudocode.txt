@@ -1,0 +1,20 @@
+- okay we should have a vector that basically holds Somethings that determines how many Folders Deep we are	currently converting 
+	- this is to make it easier to make the output paths or something n stuff 
+	- anyway we're gonna need functions for navigating deeper and navigating upwards, which will result in members getting pushed and popped, respectively, and then the current directory getting rebuilt/redeclared from the vector 
+	- these functions will probably be useful for main() going up and down w/navigation... will consider
+
+- since there's no real point to having separate functions for the style rules and the body detector (since they only get called on like once in the class (in executor())), just put them right into executor()
+	- in doing so, we can probably also get rid of the vector pointers?
+
+- anyway, rather than working w/strings, have ins and outs be handled as directory_entry and path objects. it'll keep us from needing so many private strings for input/output, like fname, tmpname, ftype, etc.
+
+- also fix the loggy function to output times again :(
+
+- anyway also since it should only really be setName() and executor() in main(), perhaps get rid of setRaw() and setClean()?
+
+- keep the bool for bulk processing though, since that determines whether the output file gets cleared or appended each time the thing happens
+
+- anyway, will need a function which will Check if a directory already exists in the output folder that matches the current subfolder for us to spit our outputs to, and if not, make one
+
+- OH YEAH once a file has been converted, the original html should be moved to a "completed" folder, and the original deleted
+	- probably as the first run through is gone through, have each line copied over to the "completed" folder version

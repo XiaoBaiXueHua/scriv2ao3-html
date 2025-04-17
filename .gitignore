@@ -37,10 +37,12 @@
 *.ilk
 
 # artifacts of creation
-**/output/*.html
-**/output/*.css
+**/output/**
+**/html/**
+**/converted/**
 **/tmp/*
 **/log.txt
 
 # Stuff I just want to keep private
+*.config
 **/private
