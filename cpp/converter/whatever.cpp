@@ -329,6 +329,49 @@ void sanitize::reset()
 }
 
 /* sanitize operator overloads */
+ostream &operator<<(ostream &os, const sanitize &san)
+{
+	sanitize copy(san);
+	string nya{copy.cleanup()}; // might have to make this a stringstream
+	os << setfill(sanitize::fill);
+	if (!copy.hr)
+	{
+		os << copy.printTag();
+	}
+	if (copy.indeces.size() > 1 && sanitize::prettify)
+	{
+		if (copy.hr)
+		{
+			cout << "ohh. hmm. i suspect we were not supposed to splitter this. yet here we are, doing it anyway." << endl;
+		}
+
+		int i{0}; // keeps track of where in the string we currently are
+		for (int j{0}; j < copy.indeces.size(); j++)
+		{
+			if (copy.indeces[j] > 0) // prevent it from printing useless tabs n stuff
+			{
+				os << endl;						   // start a new line
+				os << setw(copy.indent + 1) << ""; // tab it
+				os << nya.substr(i, copy.indeces[j]);
+			}
+			i += copy.indeces[j]; // add this for the next loop's starting point
+		}
+		os << endl << setw(copy.indent) << ""; // and then tab it in preparation for the closing tag
+	}
+	else
+	{
+		// otherwise, just print it as it is
+		os << nya;
+	}
+
+	if (!copy.hr)
+	{
+		os << copy.printClose();
+	}
+
+	return os;
+}
+
 sanitize sanitize::operator+=(const string &str)
 {
 	innerHTML += str; // concatenate & continue
@@ -383,72 +426,6 @@ sanitize sanitize::operator--(int)
 	sanitize o = *this;
 	operator--();
 	return o;
-}
-
-/* li */
-li::li(string s)
-{
-	tmp = s;
-	regex spanner(sp);
-	if (regex_search(tmp, spanner))
-	{
-		long long unsigned int i;
-		while (regex_search(tmp, spanner))
-		{
-
-			i = {tmp.find("<span")};
-			if (i > 0) //
-			{
-				clean += tmp.substr(0, i); // add the orphans up front of the span
-				snip(tmp, i);
-			}
-
-			i = tmp.find("</span>") + 7; // automatically account for the length of the </span>
-			string spn{tmp.substr(0, i)};
-			clean += cleanSpan(spn);
-			snip(tmp, i);
-		}
-		// then add the rest of tmp to the clean line
-		clean += tmp;
-	}
-	else
-	{
-		clean = tmp; // otherwise we're free! we don't need to do any cleaning
-	}
-}
-
-string li::cleanSpan(string span)
-{
-	string t{""};
-	regex s(sp);
-	// match_results sm = regex_match(span, s);
-	smatch sm; // the way this works is that it needs to have that fuckin input string be Exactly. the same.
-	if (regex_match(span, sm, s))
-	{
-		t = sm[4].str(); // the inner html
-
-		if (incl(sm[2].str())) // if it's an important span, held in the static thing, then we also add the tags
-		{
-			t = r.printTag() + t + r.printClose();
-		}
-	}
-
-	return t;
-}
-bool li::incl(string k) // k for class
-{
-	bool t{false};
-	// anyway search through the thing
-	for (cssRule rule : cssRule::stylesheet)
-	{
-		if (rule.klass == k)
-		{
-			t = true;
-			r = rule;
-			break;
-		}
-	}
-	return t;
 }
 
 //

@@ -123,97 +123,10 @@ protected:
 	vector<int> indeces{0}; // starting index is always 0
 };
 
-/* sanitize operator overloads */ 
-/* they get sad if they're moved to another file */
-ostream &operator<<(ostream &os, const sanitize &san)
-{
-	sanitize copy(san);
-	string nya{copy.cleanup()}; // might have to make this a stringstream
-	os << setfill(sanitize::fill);
-	if (!copy.hr)
-	{
-		os << copy.printTag();
-	}
-	if (copy.indeces.size() > 1 && sanitize::prettify)
-	{
-		if (copy.hr)
-		{
-			cout << "ohh. hmm. i suspect we were not supposed to splitter this. yet here we are, doing it anyway." << endl;
-		}
-
-		int i{0}; // keeps track of where in the string we currently are
-		for (int j{0}; j < copy.indeces.size(); j++)
-		{
-			if (copy.indeces[j] > 0) // prevent it from printing useless tabs n stuff
-			{
-				os << endl;						   // start a new line
-				os << setw(copy.indent + 1) << ""; // tab it
-				os << nya.substr(i, copy.indeces[j]);
-			}
-			i += copy.indeces[j]; // add this for the next loop's starting point
-		}
-		os << endl
-		   << setw(copy.indent) << ""; // and then tab it in preparation for the closing tag
-	}
-	else
-	{
-		// otherwise, just print it as it is
-		os << nya;
-	}
-
-	if (!copy.hr)
-	{
-		os << copy.printClose();
-	}
-
-	return os;
-}
-
-
 // initialize the statics
 bool sanitize::prettify = true;
 char sanitize::fill = '\t';
 string sanitize::hrStr = "~***~"; // must either be an exact string or a regex
 vector<cssRule> cssRule::stylesheet = {};
-
-class li
-{
-	// actually i think it might be time to make a class for this one.
-public:
-	li() {};
-	li(string);
-	string cleanSpan(string);
-	bool incl(string);
-	friend ostream &operator<<(ostream &, const li &);
-
-private:
-	string sp{"(<span\\sclass=\"((\\w|\\d|\\-)+)\">)(.*?)(</span>)"}; // regex for spans i fucking guess
-protected:
-	string clean{""}, tmp{""};
-	cssRule r;
-};
-
-ostream &operator<<(ostream &os, const li &l)
-{
-	os << l.clean;
-	return os;
-}
-
-class ruby
-{
-	// should have two cssRules, one for the base n one for the text
-public:
-	ruby() {};
-	ruby(string r)
-	{
-		//
-	}
-
-	friend sanitize &operator<<(const sanitize &, const ruby &);
-
-private:
-protected:
-	string rubyBase{""}, rubyText{""};
-};
 
 #endif

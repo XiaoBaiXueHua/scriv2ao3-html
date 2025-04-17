@@ -8,8 +8,10 @@
 #include <regex>
 #include <algorithm>
 #include <cmath>
-#include "whatever.h"
+#include "whatever.h" // has cssRule and sanitize
 #include "whatever.cpp"
+#include "li-ruby.h"
+#include "li-ruby.cpp"
 
 using namespace std;
 
