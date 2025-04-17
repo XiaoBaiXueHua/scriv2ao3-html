@@ -427,7 +427,7 @@ void cleaner()
 			{
 				bodySwitch = false;
 				//
-				cout << "finished cleaning ." << endl;
+				cout << "finished cleaning " << currFile.path().stem() << "." << endl;
 				// break;
 			}
 
