@@ -37,7 +37,8 @@ int main()
 {
 	configure(); // configure first n foremost
 
-	if (!filesystem::exists(filesystem::directory_entry(options::htmlFolder))) {
+	if (!filesystem::exists(filesystem::directory_entry(options::htmlFolder)))
+	{
 		// so if the source html folder doesn't exist, send notice and then exit
 		cout << "hiiii... we couldn't find your " << quoted(options::htmlFolder) << " folder... sowwie... we'll make it for you, but it'll be empty.\n\nplease enter any key to exit: ";
 		cin >> tmp;
@@ -45,7 +46,7 @@ int main()
 		exit(0);
 	}
 	// now that we're out, see if we can make any determinations abt convertOpt
-	if (options::navigator && convertOpt == 0)
+	if (!options::navigator && convertOpt == 0)
 	{
 		// so if we have the recursive/consolidation settings, like, set, then we should set convertOpt based on said settings
 		if (options::batch && options::recursive)
@@ -55,6 +56,10 @@ int main()
 		else if (options::batch)
 		{
 			convertOpt = 1;
+		}
+		else
+		{
+			convertOpt = 3; // otherwise, if batch is not set, then i presume they want to pick themselves
 		}
 	}
 
@@ -239,7 +244,6 @@ void resetEntries(bool silence)
 			}
 		}
 	}
-
 }
 void showEntries()
 {
