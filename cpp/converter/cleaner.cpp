@@ -70,15 +70,11 @@ void cleaner::whoosh()
 	cleaned << setfill(sanitize::fill);
 	bool styleSwitch{false}, bodySwitch{false}, bqtSwitch{false};
 	listSwitch = false;
-	// vector<string> lines{}; // actually let's just have a vector of the body lines. i think that'll make it easier to work with in the end
 	string parentEl{"ul"}; // parent element for list items
 	int bodyLine{0}, tables{0};
 
-	// vector<pair<string, cssRule>> linear;
 	vector<sanitize> linear;
 	float medianFontSize{1.00};
-	// vector<string> cssRules{};
-	// cleaned.open("output/test.html"); // just the test for now
 	cleaned.clear();
 	cssRule::stylesheet.clear();
 

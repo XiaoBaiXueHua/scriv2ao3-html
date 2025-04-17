@@ -257,8 +257,6 @@ void configure()
 		cout << "...configuring..." << endl;
 		resetEntries(true); // silently initialize the entry vector
 		options::configured = true;
-		convertOpt = 3; // default is just one n you choose
-
 		vector<string> config = {};
 		while (getline(c, tmp))
 		{
