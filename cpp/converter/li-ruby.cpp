@@ -71,14 +71,8 @@ ostream &operator<<(ostream &os, const li &l)
 }
 
 /* ruby */
-ruby::ruby(string r)
-{
-	// should Only serve us
-}
-
-/* operator overloading */
-// sanitize &operator<<(sanitize &san, const ruby &r)
+// ruby::ruby(string r)
 // {
-// 	// san.innerHTML
-// 	return san;
+// 	// should Only have the exact ruby regex string result (so, like, "(ruby base | ruby text)"), so we can use regex_match and smatch
+// 	orig = r; // save this for later, when we use like string.replace() to write the new ruby
 // }

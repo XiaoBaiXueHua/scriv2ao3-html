@@ -151,6 +151,8 @@ string cssRule::closeParent() { return "</" + parent + ">"; }
 
 void cssRule::setIndex(int i) { tableIndex = i; } // ...we have to do it this way bc the ++ and -- operators are for the indents. ehe
 
+void cssRule::setHTML(string str) { innerHTML = str; };
+string cssRule::getHTML() { return innerHTML; };
 /* sanitize */
 /* constructors  */
 sanitize::sanitize(string s) : cssRule::cssRule() { init(s); }
@@ -190,12 +192,9 @@ string sanitize::cleanup()
 		if (rawSize() > 8192)
 		{
 			string cleanTmp{""};
-			long unsigned int i{0}, spacer{2048};
+			long unsigned int i{0}, spacer{2048}; // let's do this in nice safe increments of 2048
 			while (i < rawSize())
 			{
-				// let's do this in nice safe increments of 2048
-				// string sub{tmp.substr(i, i + 2048)};
-				// sub = ;
 				string sub{tmp.substr(i, i + spacer)};
 				// then do some checks to make sure we're not splitting up any escape codes
 				cleanTmp += findAndSanitize(sub);
@@ -282,16 +281,22 @@ string sanitize::findAndSanitize(string &str)
 		}
 	}
 
-	// regex ruby("\\((.+?)\\s\\|\\s(.+?)\\)"); // (<[^>]*?>)?
-	// regex rby(ruby::rubyregex); // can we do this. i kind of don't think so.
 	// and then perhaps finally, ruby text
 	smatch s;
-	if (regex_search(tmp, s, regex(ruby::rubyregex)))
+	if (regex_search(tmp, regex(ruby::rubyregex)))
 	{
-		cout << "the search result match in s: " << s.str() << endl;
-		// new rubinator i guess
-		// rubinator(tmp);
-		ruby roo(s.str()); // make a ruby out of it
+		while (regex_search(tmp, s, regex(ruby::rubyregex)))
+		{
+			string syoink{s.str()};
+			// cout << "the search result match in s: " << syoink << endl;
+			// for (int k{0}; k < s.size(); k++) {
+			// 	cout << k << ". " << s[k] << endl;
+			// }
+			string lulu{"<ruby>" + s[ruby::weh.first].str() + "<rp> (</rp><rt>" + s[ruby::weh.second].str() + "</rt><rp>)</rp></ruby>"}; // this is all we can really do with it for now u_u
+			long long unsigned int p{tmp.find(syoink)}; // position of this ruby
+			// ruby roo(s.str()); // make a ruby out of it
+			tmp.replace(p, syoink.length(), lulu); // so apparently the way replace() and substr() work is that the second number is the how far out from the first number you actually wanted to go.
+		}
 	}
 	return tmp;
 }

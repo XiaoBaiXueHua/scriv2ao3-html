@@ -379,6 +379,22 @@ void configure()
 						}
 					}
 				}
+				else if (uc == "RUBYINDEX")
+				{
+					// string ints{config[1]}; // make a string of the current integers so we can clear config
+					// cout << tmp << endl;
+					vector<int> ints = {};
+					// config.clear();
+					sstr.clear();
+					sstr << config[1];
+					cout << sstr2.str() << endl;
+					while (getline(sstr, tmp2, ','))
+					{
+						ints.push_back(stoi(tmp2)); // new comma separated values
+					}
+					ruby::weh = make_pair(ints[0], ints[1]); // make a new pair out of the config strings :3
+					sstr.clear();
+				}
 
 				sstr.clear(); // clear it at the end
 				config.clear();

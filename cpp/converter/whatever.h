@@ -60,6 +60,8 @@ public:
 	string printParent();
 	string closeParent();
 	void setIndex(int);
+	void setHTML(string);
+	string getHTML();
 
 	// fuck it. everyone's public
 	string el{""}, klass{""}, rulez{""}, display{"inline"}, guts{""}, parent{""}; // "parent" is used for things like blockquotes n lists, which have important nesting happening
@@ -76,34 +78,38 @@ private:
 	// int indent{0};
 protected:
 	string innerHTML{""};
+	vector<int> indeces{0}; // starting index is always 0
 };
 #endif
 
 #ifndef RUBINATOR
 #define RUBINATOR
-class ruby
+class ruby // ...it turns out ao3 doesn't allow for <rb> and <rbc> elements, so there's no point in trying to do elaborate ruby splitting for now
 {
 	// should have two cssRules, one for the base n one for the text
 public:
-	ruby() {};
-	ruby(string);
+	// ruby() {};
+	// ruby(string);
 
 	static string rubyregex;
 	static int splitOpt; // this gets enumerated in the config function process
 	static bool process;
+	static pair<int, int> weh; // this is for the submatch indeces for the ruby base n ruby text
 
 	friend class sanitize;
 	// friend sanitize &operator<<(sanitize &, const ruby &);
 
 private:
+// smatch smodge;
 protected:
-	string rubyBase{""}, rubyText{""};
-	cssRule rParent{"ruby", "ruby"}, rb{"rbc", "rb"}, rt{"rtc", "rt"};
+	// string rubyBase{""}, rubyText{""}, orig{""};
+	// cssRule rParent{"ruby", "ruby"}, rb{"rbc", "rb"}, rt{"rtc", "rt"};
 };
 
-int ruby::splitOpt{2}; // default is ask
+int ruby::splitOpt{5}; // default is nosplit, since apparently ao3 doesn't actually allow for <rb> and <rbc> tags.
 bool ruby::process{true};
 string ruby::rubyregex{"\\((.*?)\\s\\|\\s(.*?)\\)"};
+pair<int, int> ruby::weh = make_pair(1, 2);
 #endif
 
 #ifndef SANITIZER
@@ -157,7 +163,6 @@ protected:
 	vector<string> unnestings{"em", "strong"}; // elements needing to be unnested
 
 	// this is kind of hacked together for the moment, but it works for how the sanitizer currently functions
-	vector<int> indeces{0}; // starting index is always 0
 };
 
 // initialize the statics
