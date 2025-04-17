@@ -1,12 +1,10 @@
 #ifndef LI_RUBY
 #define LI_RUBY
-
 #include <iostream>
 #include <string>
 #include <vector>
 #include <regex>
 #include <sstream>
-#include "whatever.h" // has dependencies on cssRule and sanitize
 
 using namespace std;
 
@@ -29,6 +27,7 @@ protected:
 
 ostream &operator<<(ostream &, const li &);
 
+
 class ruby
 {
 	// should have two cssRules, one for the base n one for the text
@@ -39,11 +38,12 @@ public:
 		//
 	}
 
-	friend sanitize &operator<<(const sanitize &, const ruby &);
+	friend sanitize &operator<<(sanitize &, const ruby &);
 
 private:
 protected:
 	string rubyBase{""}, rubyText{""};
+	cssRule rule;
 };
 
 #endif

@@ -81,3 +81,12 @@ ostream &operator<<(ostream &os, const li &l)
 	os << l.clean;
 	return os;
 }
+
+
+/* ruby */
+
+/* operator overloading */
+sanitize &operator<<(sanitize &san, const ruby &r) {
+	// san.innerHTML
+	return san;
+}

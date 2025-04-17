@@ -6,6 +6,7 @@
 #include <vector>
 #include <regex>
 #include <sstream>
+
 using namespace std;
 
 // trims from https://stackoverflow.com/216823/how-to-trim-a-stdstring
@@ -74,6 +75,7 @@ protected:
 	string innerHTML{""};
 };
 
+
 class sanitize : public cssRule
 {
 public:
@@ -111,6 +113,7 @@ public:
 	static char fill;
 	static string hrStr;
 
+	friend class ruby;
 private:
 protected:
 	cssRule rule;
